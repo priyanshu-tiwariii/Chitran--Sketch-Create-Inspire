@@ -1,4 +1,7 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import express from "express";
+
 import { createServer } from "node:http";
 import { SocketSingelton } from "./services/socketSingelton.service";
 import { env } from "@repo/backend-common/config";

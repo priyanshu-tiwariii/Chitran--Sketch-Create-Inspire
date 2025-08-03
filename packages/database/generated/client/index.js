@@ -171,7 +171,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "C:\\Users\\iampr\\stratos\\packages\\database\\generated\\client",
+      "value": "C:\\Users\\iampr\\Desktop\\Chitran--Sketch-Create-Inspire\\packages\\database\\generated\\client",
       "fromEnvVar": null
     },
     "config": {
@@ -185,7 +185,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "C:\\Users\\iampr\\stratos\\packages\\database\\prisma\\schema.prisma",
+    "sourceFilePath": "C:\\Users\\iampr\\Desktop\\Chitran--Sketch-Create-Inspire\\packages\\database\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {

@@ -262,9 +262,6 @@ importers:
       '@prisma/client':
         specifier: latest
         version: 6.5.0(prisma@6.5.0)(typescript@5.5.4)
-      dotenv:
-        specifier: ^16.4.7
-        version: 16.4.7
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*
