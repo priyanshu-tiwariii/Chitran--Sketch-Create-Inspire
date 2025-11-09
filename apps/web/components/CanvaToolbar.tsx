@@ -1,364 +1,291 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
-  RectangleHorizontal,
-  Circle,
-  Minus,
-  MoveRight,
-  Eraser,
-  Undo,
-  Redo,
-  Type,
-  Trash,
-  ChevronDown,
-  Hand,
-  Save,
-  Share2,
-  Home,
-  Menu,
-  X,
-  Loader2,
+  Circle, Eraser, Home, Loader2, LucideIcon, Minus, MousePointer, MoveRight, Pen, Redo,
+  Save, Square, Star, Trash2, Triangle, Type, Undo, X, Palette, MoreVertical
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import ShareButton from "./ShareButton";
 import { useSelector } from "react-redux";
 import { RootState } from "../redux/store";
+import { ShapeType } from "../types/shape.types";
+import ShareButton from "./ShareButton";
+import * as Popover from '@radix-ui/react-popover';
 
-
-type canvaShape = "rectangle" | "circle" | "line" | "arrow" | "text" | "eraser" | "hand";
-
+// --- PROPS INTERFACE ---
 type Props = {
   selectedTool: string;
   undo: () => void;
   redo: () => void;
   clear: () => void;
-  setSelectedTool: (tool: canvaShape) => void;
+  setSelectedTool: (tool: ShapeType) => void;
   setSelectedColor: (color: string) => void;
   setFontSize: (size: string) => void;
   setFontFamily: (family: string) => void;
   save: () => void;
-  isSaving : boolean
-  isContentThere : boolean
+  isSaving: boolean;
+  isContentThere: boolean;
 };
 
-const tools = [
-    { name: "hand", icon: Hand },
-    { name: "rectangle", icon: RectangleHorizontal },
-    { name: "circle", icon: Circle },
-    { name: "line", icon: Minus },
-    { name: "arrow", icon: MoveRight },
-    { name: "text", icon: Type },
-    { name: "eraser", icon: Eraser },
-  ];
-  
-  const actions = [
-    { name: "undo", icon: Undo },
-    { name: "redo", icon: Redo },
-    { name: "trash", icon: Trash },
-  ];
-  
-  const colors = [
-    { name: "White", value: "#ffffff" },
-    { name: "Red", value: "#ff4d4f" },
-    { name: "Blue", value: "#4a90e2" },
-    { name: "Green", value: "#00c853" },
-    { name: "Yellow", value: "#ffeb3b" },
-    { name: "Purple", value: "#a855f7" },
-    { name: "Orange", value: "#fb923c" },
-  ];
-  
-  const fontSizes = ["8px","10px","12px", "16px", "20px", "24px", "32px"];
-  const fontFamilies = [
-    { name: "Sans-serif", value: "sans-serif" },
-    { name: "Serif", value: "serif" },
-    { name: "Monospace", value: "monospace" },
-    { name: "Rough", value: "'Shadows Into Light', cursive" },
-  ];
-  
+// --- TOOL & COLOR DEFINITIONS ---
+const primaryTools: { name: ShapeType; icon: LucideIcon; tooltip: string; shortcut: string }[] = [
+  { name: "hand", icon: MousePointer, tooltip: "Select", shortcut: "V" },
+  { name: "pencil", icon: Pen, tooltip: "Pencil", shortcut: "P" },
+  { name: "rectangle", icon: Square, tooltip: "Rectangle", shortcut: "R" },
+  { name: "circle", icon: Circle, tooltip: "Circle", shortcut: "C" },
+  { name: "line", icon: Minus, tooltip: "Line", shortcut: "L" },
+  { name: "arrow", icon: MoveRight, tooltip: "Arrow", shortcut: "A" },
+  { name: "text", icon: Type, tooltip: "Text", shortcut: "T" },
+];
 
-export const CanvaToolbar = ({
-  selectedTool,
-  undo,
-  redo,
-  clear,
-  setSelectedTool,
-  setSelectedColor,
-  setFontSize,
-  setFontFamily,
-  save,
-  isSaving,
-  isContentThere
-}: Props) => {
-  const [colorDropdownOpen, setColorDropdownOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [selectedColor, updateSelectedColor] = useState(colors[0]?.value || "#ffffff");
-  const [fontSize, updateFontSize] = useState("16px");
-  const [fontFamily, updateFontFamily] = useState("sans-serif");
+const secondaryTools: { name: ShapeType; icon: LucideIcon; tooltip: string }[] = [
+  { name: "triangle", icon: Triangle, tooltip: "Triangle" },
+  { name: "star", icon: Star, tooltip: "Star" },
+  { name: "eraser", icon: Eraser, tooltip: "Eraser" },
+];
+
+const colors = [
+  "#FFFFFF", "#EF4444", "#3B82F6", "#10B981",
+  "#F59E0B", "#8B5CF6", "#F97316", "#1F2937",
+];
+
+// --- MAIN TOOLBAR COMPONENT ---
+export const CanvaToolbar = (props: Props) => {
+  const { selectedTool, undo, redo, clear, setSelectedTool, setSelectedColor, save, isSaving } = props;
   const router = useRouter();
-  const collaborativeRole = useSelector((state: RootState) => state.collaborative?.collaborativeRole || null);
-  
+  const collaborativeRole = useSelector((state: RootState) => state.collaborative?.collaborativeRole);
+  const [activeColor, setActiveColor] = useState('#FFFFFF');
 
-// Mobile Menu Toggle -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth >= 768) setMobileMenuOpen(false);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-// -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  const isEditable = useCallback(() => {
+    return collaborativeRole === "ADMIN" || collaborativeRole === "EDITOR";
+  }, [collaborativeRole]);
 
-// Handle Clicks -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  const handleClick = (toolName: string) => {
-    switch (toolName) {
-      case "undo":
-        undo();
-        break;
-      case "redo":
-        redo();
-        break;
-      case "trash":
-        clear();
-        break;
-      default:
-        setSelectedTool(toolName as canvaShape);
-        break;
-    }
-    if (isMobile) setMobileMenuOpen(false);
-  };
-// -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-// Handle Color Selection -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   const handleColorSelect = (color: string) => {
-    updateSelectedColor(color);
+    setActiveColor(color);
     setSelectedColor(color);
-    setColorDropdownOpen(false);
   };
-// -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-// Handle Font Size and Family Selection -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  const handleFontSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const size = e.target.value;
-        updateFontSize(size);
-        setFontSize(size);
-  };
-//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-    
-// Handle Font Family Selection -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  const handleFontFamilyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const family = e.target.value;
-        updateFontFamily(family);
-        setFontFamily(family);
-    };
-// -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    
-// Handle Home Button Click -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-     const handleHome = () => {
-        router.push('/dashboard')
-    }
-// -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-//Handle that user is allowed to make changes -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    const isAllowed = () => {
-      if (collaborativeRole === "ADMIN" || collaborativeRole === "EDITOR") {
-        return true;
-      }
-      return false;
-    }
-// -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
   return (
-    <div className="fixed inset-0 h-fit z-[9999]">
-
-  {/* {/* Mobile Menu Toggle ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
-    <div className={`fixed top-4 left-4 z-10 ${!isMobile ? 'hidden' : ''}`}>
-      <button 
-        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        className={`p-2 bg-white/20 backdrop-blur-lg rounded-xl border border-white/30 shadow-xl transition-all
-          ${isAllowed() ? 'text-white hover:bg-white/30' : 'text-gray-400 cursor-not-allowed opacity-50'}`}
-        disabled={!isAllowed()}
-      >
-        {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-      </button>
-    </div>
-  {/* ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
-
-  {/* Home Button ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
-    {!mobileMenuOpen && (
-      <div className={`fixed top-4 ${isMobile ? 'left-16' : 'left-4'} z-[10000]`}>
-        <button 
-          onClick={handleHome}
-          className={`p-2 lg:p-3 bg-white/20 backdrop-blur-lg rounded-xl border border-white/30 shadow-xl transition-all
-          `}
-        >
-          <Home size={24} />
-        </button>
-      </div>
-    )}
-  {/* ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
-  
-  {/* Main Toolbar ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
-    <div className={`fixed ${
-      isMobile 
-        ? `${mobileMenuOpen ? 'left-0' : '-left-full'} top-16 h-[calc(100vh-5rem)] w-64 transition-all`
-        : 'left-1/2 -translate-x-1/2 top-4'
-    } z-[9999] bg-white/20 backdrop-blur-lg px-4 py-2 rounded-xl border border-white/30 shadow-xl flex ${
-      isMobile ? 'flex-col' : 'flex-row'
-    } gap-4 pointer-events-auto ${!isAllowed() ? 'opacity-50' : ''}`}>
-
-      {/* Tools ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
-        <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-3 ${!isMobile ? 'pr-4 border-r border-white/20' : ''}`}>
-          {tools.map((tool) => {
-            const Icon = tool.icon;
-            const isSelected = selectedTool === tool.name;
-            const isHandTool = tool.name === 'hand';
-
-            return (
-              <button
-                key={tool.name}
-                onClick={() => handleClick(tool.name)}
-                className={`p-2.5 rounded-xl transition-all flex items-center gap-2 ${
-                  isSelected ? "bg-orange-500 text-white shadow-inner" : 
-                  isHandTool ? "text-white hover:bg-white/10" : 
-                  "text-gray-100 hover:bg-white/10"
-                }`}
-                disabled={!isAllowed() && !isHandTool}
-              >
-                <Icon size={isMobile ? 22 : 18} strokeWidth={1.8} />
-                {isMobile && (
-                  <span className="text-sm capitalize font-medium">
-                    {tool.name}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      {/* ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
-
-      {/* Color Picker----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
-        <div className="relative">
-          <button
-            onClick={() => setColorDropdownOpen(!colorDropdownOpen)}
-            className={`flex items-center gap-2 p-2.5 rounded-xl text-white transition-all w-full
-              ${isAllowed() ? 'hover:bg-white/10' : 'cursor-not-allowed opacity-50'}`}
-            disabled={!isAllowed()}
-          >
-            <div 
-              className="w-6 h-6 rounded-full border-2 border-white/30 shadow-sm" 
-              style={{ backgroundColor: selectedColor }} 
-            />
-            {isMobile ? (
-              <span className="text-sm">Select Color</span>
-            ) : (
-              <ChevronDown size={16} />
-            )}
-          </button>
-          {colorDropdownOpen && (
-  <div className="absolute left-0 top-12 z-50 bg-black/70 backdrop-blur-sm p-3 rounded-xl border border-white/30 shadow-lg grid grid-cols-3 gap-2 min-w-[160px]">
-    {colors.map((color) => (
-      <button
-        key={color.value}
-        onClick={() => handleColorSelect(color.value)}
-        className={`w-8 h-8 rounded-full border-2 ${
-          selectedColor === color.value
-            ? "border-orange-500 shadow-inner"
-            : "border-white/30 hover:border-white/60"
-        } transition-all`}
-        style={{ backgroundColor: color.value }}
-        title={color.name}
-      />
-    ))}
-  </div>
-)}
-        </div>
-      {/* ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
-
-      {/* Font Styling ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
-        {selectedTool === "text" && (
-          <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-3 ${!isMobile ? 'pl-4 border-l border-white/20' : ''}`}>
-            <select
-              value={fontSize}
-              onChange={handleFontSizeChange}
-              className={`bg-white/20 text-orange-500 rounded-lg p-2 ${
-                !isAllowed() ? 'cursor-not-allowed opacity-50' : ''
-              }`}
-              disabled={!isAllowed()}
-            >
-              {fontSizes.map((size) => (
-                <option key={size} value={size} className="bg-white/80">
-                  {size}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={fontFamily}
-              onChange={handleFontFamilyChange}
-              className={`bg-white/20 text-orange-500 rounded-lg p-2 ${
-                !isAllowed() ? 'cursor-not-allowed opacity-50' : ''
-              }`}
-              disabled={!isAllowed()}
-            >
-              {fontFamilies.map((font) => (
-                <option key={font.name} value={font.value} className="bg-white/80">
-                  {font.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-      {/* ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
-
-      {/* Undo/Redo -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/}
-        <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-3 ${!isMobile ? 'pl-4 border-l border-white/20' : ''}`}>
-          {actions.map((tool) => (
-            <button
+    <>
+      {/* Left Vertical Toolbar for Creation Tools */}
+      <div className="fixed left-4 top-1/2 -translate-y-1/2 z-50 p-2 bg-zinc-900/80 backdrop-blur-md rounded-xl border border-zinc-700 shadow-2xl">
+        <div className="flex flex-col items-center gap-1.5">
+          {primaryTools.map((tool) => (
+            <ToolButton
               key={tool.name}
-              onClick={() => handleClick(tool.name)}
-              className={`p-2.5 rounded-xl transition-all flex items-center gap-2 ${
-                isAllowed() ? 'text-white hover:bg-white/10' : 'text-gray-400 cursor-not-allowed opacity-50'
-              }`}
-              disabled={!isAllowed()}
-            >
-              <tool.icon size={isMobile ? 22 : 18} strokeWidth={1.8} />
-              {isMobile && <span className="text-sm capitalize">{tool.name}</span>}
-            </button>
+              tool={tool}
+              isActive={selectedTool === tool.name}
+              onClick={() => setSelectedTool(tool.name)}
+              disabled={!isEditable() && tool.name !== 'hand'}
+            />
           ))}
+          <div className="w-8 h-px bg-zinc-700 my-1" />
+          <ColorPickerPopover
+            selectedColor={activeColor}
+            onColorSelect={handleColorSelect}
+            disabled={!isEditable()}
+          />
+          <SecondaryToolsPopover
+            tools={secondaryTools}
+            selectedTool={selectedTool}
+            onToolSelect={setSelectedTool}
+            disabled={!isEditable()}
+          />
         </div>
-      {/* ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
-    
-    </div>
-  {/* ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
-  
-  {/* Save/Share Buttons ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
-    <div className="fixed top-4 right-4 z-[10000] flex gap-3">
-      <ShareButton />
-      <button 
-        onClick={save}  
-        disabled={isSaving || !isContentThere || !isAllowed()}
-        className={`px-4 sm:py-2 lg:py-3 rounded-xl border border-white/30 shadow-xl transition-all flex items-center gap-2 ${
-          isContentThere && isAllowed() 
-            ? 'bg-orange-500 text-white hover:bg-orange-600' 
-            : 'bg-orange-300 text-gray-100 cursor-not-allowed'
-        }`}
-      >
-        {isSaving ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : ( 
-          <>
-            <Save size={20} />
-            {!isMobile && <span className="lg:text-xl">Save</span>}
-          </>
-        )}
-      </button>
-    </div>
-  {/* ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
-</div>
+      </div>
+
+      {/* Top Horizontal Toolbar for Actions */}
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 p-2 bg-zinc-900/80 backdrop-blur-md rounded-xl border border-zinc-700 shadow-2xl">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-zinc-800 transition-colors group"
+          >
+            <div className="w-7 h-7 rounded-md bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
+              <Home size={16} className="text-white" />
+            </div>
+            <span className="text-zinc-200 font-semibold text-sm">Chitran</span>
+          </button>
+          <div className="h-6 w-px bg-zinc-700" />
+          <ActionButton tooltip="Undo (Ctrl+Z)" onClick={undo} disabled={!isEditable()}>
+            <Undo size={18} />
+          </ActionButton>
+          <ActionButton tooltip="Redo (Ctrl+Y)" onClick={redo} disabled={!isEditable()}>
+            <Redo size={18} />
+          </ActionButton>
+          <div className="h-6 w-px bg-zinc-700" />
+          <ShareButton />
+          <ActionButton tooltip="Clear Canvas" onClick={clear} disabled={!isEditable()} variant="destructive">
+            <Trash2 size={18} />
+          </ActionButton>
+          <div className="h-6 w-px bg-zinc-700" />
+         
+          <button
+            onClick={save}
+            disabled={isSaving || !isEditable()}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-orange-500 text-white font-medium text-sm hover:bg-orange-600 disabled:bg-zinc-600 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105"
+          >
+            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            <span>Save</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Bottom Status Bar */}
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 px-4 py-1.5 bg-zinc-900/80 backdrop-blur-md rounded-lg border border-zinc-700 shadow-2xl">
+        <div className="flex items-center gap-4 text-xs text-zinc-400">
+          <span>Role: <span className="text-zinc-200 font-medium">{collaborativeRole}</span></span>
+          <div className="h-3 w-px bg-zinc-700" />
+          <span>Tool: <span className="text-zinc-200 font-medium capitalize">{selectedTool}</span></span>
+        </div>
+      </div>
+    </>
   );
 };
+
+// --- REFINED & REUSABLE SUB-COMPONENTS ---
+
+const TooltipWrapper = ({ tooltip, shortcut, children }: { tooltip: string, shortcut?: string, children: React.ReactNode }) => (
+  <div className="relative group">
+    {children}
+    <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 z-50 pointer-events-none">
+      <div className="bg-zinc-800 text-white text-xs px-2.5 py-1.5 rounded-md border border-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-lg">
+        <div className="flex items-center gap-2">
+          <span>{tooltip}</span>
+          {shortcut && <span className="text-zinc-400 text-xs">({shortcut})</span>}
+        </div>
+        <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-zinc-800" />
+      </div>
+    </div>
+  </div>
+);
+
+const ToolButton = ({ tool, isActive, onClick, disabled }: {
+  tool: { name: ShapeType; icon: LucideIcon; tooltip: string; shortcut?: string };
+  isActive: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+}) => (
+  <TooltipWrapper tooltip={tool.tooltip} shortcut={tool.shortcut}>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`p-2.5 rounded-lg transition-all duration-200 flex items-center justify-center
+        {/* --- UI/UX CHANGE: Active tool state now uses the primary brand color --- */}
+        ${isActive
+          ? 'bg-orange-500 text-white scale-110 shadow-lg shadow-orange-500/20'
+          : 'text-zinc-300 hover:bg-zinc-700 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed'
+        }
+        ${!disabled && !isActive ? 'hover:scale-110' : ''}
+      `}
+    >
+      <tool.icon size={20} strokeWidth={2} />
+    </button>
+  </TooltipWrapper>
+);
+
+type ActionButtonProps = {
+  tooltip: string;
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  variant?: "default" | "destructive";
+};
+
+const ActionButton = ({
+  tooltip,
+  children,
+  onClick,
+  disabled,
+  variant = "default",
+}: ActionButtonProps) => {
+  const variantClasses: { [key in "default" | "destructive"]: string } = {
+    default: "text-zinc-300 hover:bg-zinc-800 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed",
+    destructive: "text-red-400 hover:bg-red-900/50 hover:text-red-300 disabled:opacity-40 disabled:cursor-not-allowed"
+  };
+  return (
+    <TooltipWrapper tooltip={tooltip}>
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        className={`p-2 rounded-lg transition-colors duration-200 ${variantClasses[variant]}`}
+      >
+        {children}
+      </button>
+    </TooltipWrapper>
+  );
+};
+
+const ColorPickerPopover = ({ selectedColor, onColorSelect, disabled }: {
+  selectedColor: string;
+  onColorSelect: (color: string) => void;
+  disabled?: boolean;
+}) => (
+  <Popover.Root>
+    <TooltipWrapper tooltip="Color">
+      <Popover.Trigger asChild disabled={disabled}>
+        <button
+          className="p-2.5 rounded-lg transition-all duration-200 flex items-center justify-center text-zinc-300 hover:bg-zinc-700 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed hover:scale-110"
+        >
+          <div className="w-5 h-5 rounded-full border-2 border-zinc-400" style={{ backgroundColor: selectedColor }} />
+        </button>
+      </Popover.Trigger>
+    </TooltipWrapper>
+    <Popover.Portal>
+      <Popover.Content
+        side="right"
+        align="center"
+        sideOffset={12}
+        className="z-[100] p-2 bg-zinc-800 border border-zinc-700 rounded-lg shadow-2xl grid grid-cols-4 gap-1.5 animate-in fade-in-0 zoom-in-95"
+      >
+        {colors.map(color => (
+          <Popover.Close asChild key={color}>
+            <button
+              onClick={() => onColorSelect(color)}
+              className={`w-6 h-6 rounded-md border-2 transition-transform duration-150 hover:scale-110
+                {/* --- UI/UX CHANGE: Selected color border now uses the primary brand color --- */}
+                ${selectedColor === color ? 'border-orange-500 scale-110' : 'border-zinc-600'}
+              `}
+              style={{ backgroundColor: color }}
+            />
+          </Popover.Close>
+        ))}
+      </Popover.Content>
+    </Popover.Portal>
+  </Popover.Root>
+);
+
+const SecondaryToolsPopover = ({ tools, selectedTool, onToolSelect, disabled }: {
+  tools: { name: ShapeType; icon: LucideIcon; tooltip: string }[];
+  selectedTool: string;
+  onToolSelect: (tool: ShapeType) => void;
+  disabled?: boolean;
+}) => (
+  <Popover.Root>
+    <TooltipWrapper tooltip="More Tools">
+      <Popover.Trigger asChild disabled={disabled}>
+        <button className="p-2.5 rounded-lg transition-all duration-200 flex items-center justify-center text-zinc-300 hover:bg-zinc-700 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed hover:scale-110">
+          <MoreVertical size={20} />
+        </button>
+      </Popover.Trigger>
+    </TooltipWrapper>
+    <Popover.Portal>
+      <Popover.Content
+        side="right"
+        align="center"
+        sideOffset={12}
+        className="z-[100] p-2 bg-zinc-800 border border-zinc-700 rounded-lg shadow-2xl flex flex-col gap-1 animate-in fade-in-0 zoom-in-95"
+      >
+        {tools.map((tool) => (
+          <Popover.Close asChild key={tool.name}>
+            <ToolButton
+              tool={tool}
+              isActive={selectedTool === tool.name}
+              onClick={() => onToolSelect(tool.name)}
+              disabled={disabled}
+            />
+          </Popover.Close>
+        ))}
+      </Popover.Content>
+    </Popover.Portal>
+  </Popover.Root>
+);

@@ -33,21 +33,24 @@ model CreatedFile {
 }
 
 model Stroke {
-  id         String       @id @default(uuid())
-  fileId     String      
-  type       String
-  x          Float?
-  y          Float?
-  w          Float?       @default(0)
-  h          Float?       @default(0)
-  radius     Float?       @default(0)
-  text       String?      @default("")
-  fontSize   Int?         @default(16)
-  fontFamily String?      @default("Arial")
-  color      String?      @default("")
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  file       CreatedFile  @relation("Strokes", fields: [fileId], references: [id], onDelete: Cascade)
+  id          String   @id @default(uuid())
+  fileId      String
+  type        String
+  x           Float?
+  y           Float?
+  width       Float?   @default(0) 
+  height      Float?   @default(0) 
+  radius      Float?   @default(0)
+  text        String?  @default("")
+  fontSize    Int?     @default(16)
+  fontFamily  String?  @default("Arial")
+  color       String?  @default("")
+  points      Json?    @default("[]") 
+  rotation    Float?   @default(0) 
+  strokeWidth Float?   @default(1)  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  file        CreatedFile @relation("Strokes", fields: [fileId], references: [id], onDelete: Cascade)
 }
 
 

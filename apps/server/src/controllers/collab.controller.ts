@@ -283,11 +283,30 @@ import { redis } from "../db/index";
     });
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-export const isCollabarator = asyncHandler(async (req: any, res: any) => { 
-
+export const isCollabarator = asyncHandler(async (req: any, res: any) => {
     try {
         const { fileId } = req.params;
         const userId = req.user.id;
+        const file = await prisma.createdFile.findUnique({
+            where: { id: fileId },
+        });
+
+        if (!file) {
+            throw new apiError(404, "File not found");
+        }
+
+        if (file.createdByUserId === userId) {
+            const adminData = {
+                id: userId,
+                fileId: fileId,
+                userId: userId,
+                role: "ADMIN",
+                joinedAt: file.createdAt
+            };
+            return res.status(200).json(
+                new apiResponse(adminData, 200, "User is file admin", true)
+            );
+        }
         const collab = await prisma.collaborator.findFirst({
             where: {
                 fileId,
@@ -300,9 +319,6 @@ export const isCollabarator = asyncHandler(async (req: any, res: any) => {
                 new apiResponse(null, 403, "User is not a collaborator", false)
             );
         }
-
-        
-
         return res.status(200).json(
             new apiResponse(collab, 200, "User is a collaborator", true)
         );
@@ -317,5 +333,4 @@ export const isCollabarator = asyncHandler(async (req: any, res: any) => {
             throw new apiError(500, "Unknown error occurred while checking collaborator status");
         }
     }
-}   
-);
+});

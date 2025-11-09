@@ -3507,19 +3507,23 @@ export namespace Prisma {
   export type StrokeAvgAggregateOutputType = {
     x: number | null
     y: number | null
-    w: number | null
-    h: number | null
+    width: number | null
+    height: number | null
     radius: number | null
     fontSize: number | null
+    rotation: number | null
+    strokeWidth: number | null
   }
 
   export type StrokeSumAggregateOutputType = {
     x: number | null
     y: number | null
-    w: number | null
-    h: number | null
+    width: number | null
+    height: number | null
     radius: number | null
     fontSize: number | null
+    rotation: number | null
+    strokeWidth: number | null
   }
 
   export type StrokeMinAggregateOutputType = {
@@ -3528,13 +3532,15 @@ export namespace Prisma {
     type: string | null
     x: number | null
     y: number | null
-    w: number | null
-    h: number | null
+    width: number | null
+    height: number | null
     radius: number | null
     text: string | null
     fontSize: number | null
     fontFamily: string | null
     color: string | null
+    rotation: number | null
+    strokeWidth: number | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -3545,13 +3551,15 @@ export namespace Prisma {
     type: string | null
     x: number | null
     y: number | null
-    w: number | null
-    h: number | null
+    width: number | null
+    height: number | null
     radius: number | null
     text: string | null
     fontSize: number | null
     fontFamily: string | null
     color: string | null
+    rotation: number | null
+    strokeWidth: number | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -3562,13 +3570,16 @@ export namespace Prisma {
     type: number
     x: number
     y: number
-    w: number
-    h: number
+    width: number
+    height: number
     radius: number
     text: number
     fontSize: number
     fontFamily: number
     color: number
+    points: number
+    rotation: number
+    strokeWidth: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -3578,19 +3589,23 @@ export namespace Prisma {
   export type StrokeAvgAggregateInputType = {
     x?: true
     y?: true
-    w?: true
-    h?: true
+    width?: true
+    height?: true
     radius?: true
     fontSize?: true
+    rotation?: true
+    strokeWidth?: true
   }
 
   export type StrokeSumAggregateInputType = {
     x?: true
     y?: true
-    w?: true
-    h?: true
+    width?: true
+    height?: true
     radius?: true
     fontSize?: true
+    rotation?: true
+    strokeWidth?: true
   }
 
   export type StrokeMinAggregateInputType = {
@@ -3599,13 +3614,15 @@ export namespace Prisma {
     type?: true
     x?: true
     y?: true
-    w?: true
-    h?: true
+    width?: true
+    height?: true
     radius?: true
     text?: true
     fontSize?: true
     fontFamily?: true
     color?: true
+    rotation?: true
+    strokeWidth?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -3616,13 +3633,15 @@ export namespace Prisma {
     type?: true
     x?: true
     y?: true
-    w?: true
-    h?: true
+    width?: true
+    height?: true
     radius?: true
     text?: true
     fontSize?: true
     fontFamily?: true
     color?: true
+    rotation?: true
+    strokeWidth?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -3633,13 +3652,16 @@ export namespace Prisma {
     type?: true
     x?: true
     y?: true
-    w?: true
-    h?: true
+    width?: true
+    height?: true
     radius?: true
     text?: true
     fontSize?: true
     fontFamily?: true
     color?: true
+    points?: true
+    rotation?: true
+    strokeWidth?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -3737,13 +3759,16 @@ export namespace Prisma {
     type: string
     x: number | null
     y: number | null
-    w: number | null
-    h: number | null
+    width: number | null
+    height: number | null
     radius: number | null
     text: string | null
     fontSize: number | null
     fontFamily: string | null
     color: string | null
+    points: JsonValue | null
+    rotation: number | null
+    strokeWidth: number | null
     createdAt: Date
     updatedAt: Date
     _count: StrokeCountAggregateOutputType | null
@@ -3773,13 +3798,16 @@ export namespace Prisma {
     type?: boolean
     x?: boolean
     y?: boolean
-    w?: boolean
-    h?: boolean
+    width?: boolean
+    height?: boolean
     radius?: boolean
     text?: boolean
     fontSize?: boolean
     fontFamily?: boolean
     color?: boolean
+    points?: boolean
+    rotation?: boolean
+    strokeWidth?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     file?: boolean | CreatedFileDefaultArgs<ExtArgs>
@@ -3791,13 +3819,16 @@ export namespace Prisma {
     type?: boolean
     x?: boolean
     y?: boolean
-    w?: boolean
-    h?: boolean
+    width?: boolean
+    height?: boolean
     radius?: boolean
     text?: boolean
     fontSize?: boolean
     fontFamily?: boolean
     color?: boolean
+    points?: boolean
+    rotation?: boolean
+    strokeWidth?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     file?: boolean | CreatedFileDefaultArgs<ExtArgs>
@@ -3809,13 +3840,16 @@ export namespace Prisma {
     type?: boolean
     x?: boolean
     y?: boolean
-    w?: boolean
-    h?: boolean
+    width?: boolean
+    height?: boolean
     radius?: boolean
     text?: boolean
     fontSize?: boolean
     fontFamily?: boolean
     color?: boolean
+    points?: boolean
+    rotation?: boolean
+    strokeWidth?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     file?: boolean | CreatedFileDefaultArgs<ExtArgs>
@@ -3827,18 +3861,21 @@ export namespace Prisma {
     type?: boolean
     x?: boolean
     y?: boolean
-    w?: boolean
-    h?: boolean
+    width?: boolean
+    height?: boolean
     radius?: boolean
     text?: boolean
     fontSize?: boolean
     fontFamily?: boolean
     color?: boolean
+    points?: boolean
+    rotation?: boolean
+    strokeWidth?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type StrokeOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "fileId" | "type" | "x" | "y" | "w" | "h" | "radius" | "text" | "fontSize" | "fontFamily" | "color" | "createdAt" | "updatedAt", ExtArgs["result"]["stroke"]>
+  export type StrokeOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "fileId" | "type" | "x" | "y" | "width" | "height" | "radius" | "text" | "fontSize" | "fontFamily" | "color" | "points" | "rotation" | "strokeWidth" | "createdAt" | "updatedAt", ExtArgs["result"]["stroke"]>
   export type StrokeInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     file?: boolean | CreatedFileDefaultArgs<ExtArgs>
   }
@@ -3860,13 +3897,16 @@ export namespace Prisma {
       type: string
       x: number | null
       y: number | null
-      w: number | null
-      h: number | null
+      width: number | null
+      height: number | null
       radius: number | null
       text: string | null
       fontSize: number | null
       fontFamily: string | null
       color: string | null
+      points: Prisma.JsonValue | null
+      rotation: number | null
+      strokeWidth: number | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["stroke"]>
@@ -4298,13 +4338,16 @@ export namespace Prisma {
     readonly type: FieldRef<"Stroke", 'String'>
     readonly x: FieldRef<"Stroke", 'Float'>
     readonly y: FieldRef<"Stroke", 'Float'>
-    readonly w: FieldRef<"Stroke", 'Float'>
-    readonly h: FieldRef<"Stroke", 'Float'>
+    readonly width: FieldRef<"Stroke", 'Float'>
+    readonly height: FieldRef<"Stroke", 'Float'>
     readonly radius: FieldRef<"Stroke", 'Float'>
     readonly text: FieldRef<"Stroke", 'String'>
     readonly fontSize: FieldRef<"Stroke", 'Int'>
     readonly fontFamily: FieldRef<"Stroke", 'String'>
     readonly color: FieldRef<"Stroke", 'String'>
+    readonly points: FieldRef<"Stroke", 'Json'>
+    readonly rotation: FieldRef<"Stroke", 'Float'>
+    readonly strokeWidth: FieldRef<"Stroke", 'Float'>
     readonly createdAt: FieldRef<"Stroke", 'DateTime'>
     readonly updatedAt: FieldRef<"Stroke", 'DateTime'>
   }
@@ -5832,13 +5875,16 @@ export namespace Prisma {
     type: 'type',
     x: 'x',
     y: 'y',
-    w: 'w',
-    h: 'h',
+    width: 'width',
+    height: 'height',
     radius: 'radius',
     text: 'text',
     fontSize: 'fontSize',
     fontFamily: 'fontFamily',
     color: 'color',
+    points: 'points',
+    rotation: 'rotation',
+    strokeWidth: 'strokeWidth',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -5865,6 +5911,14 @@ export namespace Prisma {
   export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+  export const NullableJsonNullValueInput: {
+    DbNull: typeof DbNull,
+    JsonNull: typeof JsonNull
+  };
+
+  export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
   export const QueryMode: {
     default: 'default',
     insensitive: 'insensitive'
@@ -5879,6 +5933,15 @@ export namespace Prisma {
   };
 
   export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+  export const JsonNullValueFilter: {
+    DbNull: typeof DbNull,
+    JsonNull: typeof JsonNull,
+    AnyNull: typeof AnyNull
+  };
+
+  export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
 
   /**
@@ -5946,6 +6009,20 @@ export namespace Prisma {
    * Reference to a field of type 'Int[]'
    */
   export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'Json'
+   */
+  export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+    
+
+
+  /**
+   * Reference to a field of type 'QueryMode'
+   */
+  export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
     
 
 
@@ -6109,13 +6186,16 @@ export namespace Prisma {
     type?: StringFilter<"Stroke"> | string
     x?: FloatNullableFilter<"Stroke"> | number | null
     y?: FloatNullableFilter<"Stroke"> | number | null
-    w?: FloatNullableFilter<"Stroke"> | number | null
-    h?: FloatNullableFilter<"Stroke"> | number | null
+    width?: FloatNullableFilter<"Stroke"> | number | null
+    height?: FloatNullableFilter<"Stroke"> | number | null
     radius?: FloatNullableFilter<"Stroke"> | number | null
     text?: StringNullableFilter<"Stroke"> | string | null
     fontSize?: IntNullableFilter<"Stroke"> | number | null
     fontFamily?: StringNullableFilter<"Stroke"> | string | null
     color?: StringNullableFilter<"Stroke"> | string | null
+    points?: JsonNullableFilter<"Stroke">
+    rotation?: FloatNullableFilter<"Stroke"> | number | null
+    strokeWidth?: FloatNullableFilter<"Stroke"> | number | null
     createdAt?: DateTimeFilter<"Stroke"> | Date | string
     updatedAt?: DateTimeFilter<"Stroke"> | Date | string
     file?: XOR<CreatedFileScalarRelationFilter, CreatedFileWhereInput>
@@ -6127,13 +6207,16 @@ export namespace Prisma {
     type?: SortOrder
     x?: SortOrderInput | SortOrder
     y?: SortOrderInput | SortOrder
-    w?: SortOrderInput | SortOrder
-    h?: SortOrderInput | SortOrder
+    width?: SortOrderInput | SortOrder
+    height?: SortOrderInput | SortOrder
     radius?: SortOrderInput | SortOrder
     text?: SortOrderInput | SortOrder
     fontSize?: SortOrderInput | SortOrder
     fontFamily?: SortOrderInput | SortOrder
     color?: SortOrderInput | SortOrder
+    points?: SortOrderInput | SortOrder
+    rotation?: SortOrderInput | SortOrder
+    strokeWidth?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     file?: CreatedFileOrderByWithRelationInput
@@ -6148,13 +6231,16 @@ export namespace Prisma {
     type?: StringFilter<"Stroke"> | string
     x?: FloatNullableFilter<"Stroke"> | number | null
     y?: FloatNullableFilter<"Stroke"> | number | null
-    w?: FloatNullableFilter<"Stroke"> | number | null
-    h?: FloatNullableFilter<"Stroke"> | number | null
+    width?: FloatNullableFilter<"Stroke"> | number | null
+    height?: FloatNullableFilter<"Stroke"> | number | null
     radius?: FloatNullableFilter<"Stroke"> | number | null
     text?: StringNullableFilter<"Stroke"> | string | null
     fontSize?: IntNullableFilter<"Stroke"> | number | null
     fontFamily?: StringNullableFilter<"Stroke"> | string | null
     color?: StringNullableFilter<"Stroke"> | string | null
+    points?: JsonNullableFilter<"Stroke">
+    rotation?: FloatNullableFilter<"Stroke"> | number | null
+    strokeWidth?: FloatNullableFilter<"Stroke"> | number | null
     createdAt?: DateTimeFilter<"Stroke"> | Date | string
     updatedAt?: DateTimeFilter<"Stroke"> | Date | string
     file?: XOR<CreatedFileScalarRelationFilter, CreatedFileWhereInput>
@@ -6166,13 +6252,16 @@ export namespace Prisma {
     type?: SortOrder
     x?: SortOrderInput | SortOrder
     y?: SortOrderInput | SortOrder
-    w?: SortOrderInput | SortOrder
-    h?: SortOrderInput | SortOrder
+    width?: SortOrderInput | SortOrder
+    height?: SortOrderInput | SortOrder
     radius?: SortOrderInput | SortOrder
     text?: SortOrderInput | SortOrder
     fontSize?: SortOrderInput | SortOrder
     fontFamily?: SortOrderInput | SortOrder
     color?: SortOrderInput | SortOrder
+    points?: SortOrderInput | SortOrder
+    rotation?: SortOrderInput | SortOrder
+    strokeWidth?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: StrokeCountOrderByAggregateInput
@@ -6191,13 +6280,16 @@ export namespace Prisma {
     type?: StringWithAggregatesFilter<"Stroke"> | string
     x?: FloatNullableWithAggregatesFilter<"Stroke"> | number | null
     y?: FloatNullableWithAggregatesFilter<"Stroke"> | number | null
-    w?: FloatNullableWithAggregatesFilter<"Stroke"> | number | null
-    h?: FloatNullableWithAggregatesFilter<"Stroke"> | number | null
+    width?: FloatNullableWithAggregatesFilter<"Stroke"> | number | null
+    height?: FloatNullableWithAggregatesFilter<"Stroke"> | number | null
     radius?: FloatNullableWithAggregatesFilter<"Stroke"> | number | null
     text?: StringNullableWithAggregatesFilter<"Stroke"> | string | null
     fontSize?: IntNullableWithAggregatesFilter<"Stroke"> | number | null
     fontFamily?: StringNullableWithAggregatesFilter<"Stroke"> | string | null
     color?: StringNullableWithAggregatesFilter<"Stroke"> | string | null
+    points?: JsonNullableWithAggregatesFilter<"Stroke">
+    rotation?: FloatNullableWithAggregatesFilter<"Stroke"> | number | null
+    strokeWidth?: FloatNullableWithAggregatesFilter<"Stroke"> | number | null
     createdAt?: DateTimeWithAggregatesFilter<"Stroke"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Stroke"> | Date | string
   }
@@ -6413,13 +6505,16 @@ export namespace Prisma {
     type: string
     x?: number | null
     y?: number | null
-    w?: number | null
-    h?: number | null
+    width?: number | null
+    height?: number | null
     radius?: number | null
     text?: string | null
     fontSize?: number | null
     fontFamily?: string | null
     color?: string | null
+    points?: NullableJsonNullValueInput | InputJsonValue
+    rotation?: number | null
+    strokeWidth?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     file: CreatedFileCreateNestedOneWithoutStrokesInput
@@ -6431,13 +6526,16 @@ export namespace Prisma {
     type: string
     x?: number | null
     y?: number | null
-    w?: number | null
-    h?: number | null
+    width?: number | null
+    height?: number | null
     radius?: number | null
     text?: string | null
     fontSize?: number | null
     fontFamily?: string | null
     color?: string | null
+    points?: NullableJsonNullValueInput | InputJsonValue
+    rotation?: number | null
+    strokeWidth?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -6447,13 +6545,16 @@ export namespace Prisma {
     type?: StringFieldUpdateOperationsInput | string
     x?: NullableFloatFieldUpdateOperationsInput | number | null
     y?: NullableFloatFieldUpdateOperationsInput | number | null
-    w?: NullableFloatFieldUpdateOperationsInput | number | null
-    h?: NullableFloatFieldUpdateOperationsInput | number | null
+    width?: NullableFloatFieldUpdateOperationsInput | number | null
+    height?: NullableFloatFieldUpdateOperationsInput | number | null
     radius?: NullableFloatFieldUpdateOperationsInput | number | null
     text?: NullableStringFieldUpdateOperationsInput | string | null
     fontSize?: NullableIntFieldUpdateOperationsInput | number | null
     fontFamily?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
+    points?: NullableJsonNullValueInput | InputJsonValue
+    rotation?: NullableFloatFieldUpdateOperationsInput | number | null
+    strokeWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     file?: CreatedFileUpdateOneRequiredWithoutStrokesNestedInput
@@ -6465,13 +6566,16 @@ export namespace Prisma {
     type?: StringFieldUpdateOperationsInput | string
     x?: NullableFloatFieldUpdateOperationsInput | number | null
     y?: NullableFloatFieldUpdateOperationsInput | number | null
-    w?: NullableFloatFieldUpdateOperationsInput | number | null
-    h?: NullableFloatFieldUpdateOperationsInput | number | null
+    width?: NullableFloatFieldUpdateOperationsInput | number | null
+    height?: NullableFloatFieldUpdateOperationsInput | number | null
     radius?: NullableFloatFieldUpdateOperationsInput | number | null
     text?: NullableStringFieldUpdateOperationsInput | string | null
     fontSize?: NullableIntFieldUpdateOperationsInput | number | null
     fontFamily?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
+    points?: NullableJsonNullValueInput | InputJsonValue
+    rotation?: NullableFloatFieldUpdateOperationsInput | number | null
+    strokeWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -6482,13 +6586,16 @@ export namespace Prisma {
     type: string
     x?: number | null
     y?: number | null
-    w?: number | null
-    h?: number | null
+    width?: number | null
+    height?: number | null
     radius?: number | null
     text?: string | null
     fontSize?: number | null
     fontFamily?: string | null
     color?: string | null
+    points?: NullableJsonNullValueInput | InputJsonValue
+    rotation?: number | null
+    strokeWidth?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -6498,13 +6605,16 @@ export namespace Prisma {
     type?: StringFieldUpdateOperationsInput | string
     x?: NullableFloatFieldUpdateOperationsInput | number | null
     y?: NullableFloatFieldUpdateOperationsInput | number | null
-    w?: NullableFloatFieldUpdateOperationsInput | number | null
-    h?: NullableFloatFieldUpdateOperationsInput | number | null
+    width?: NullableFloatFieldUpdateOperationsInput | number | null
+    height?: NullableFloatFieldUpdateOperationsInput | number | null
     radius?: NullableFloatFieldUpdateOperationsInput | number | null
     text?: NullableStringFieldUpdateOperationsInput | string | null
     fontSize?: NullableIntFieldUpdateOperationsInput | number | null
     fontFamily?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
+    points?: NullableJsonNullValueInput | InputJsonValue
+    rotation?: NullableFloatFieldUpdateOperationsInput | number | null
+    strokeWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -6515,13 +6625,16 @@ export namespace Prisma {
     type?: StringFieldUpdateOperationsInput | string
     x?: NullableFloatFieldUpdateOperationsInput | number | null
     y?: NullableFloatFieldUpdateOperationsInput | number | null
-    w?: NullableFloatFieldUpdateOperationsInput | number | null
-    h?: NullableFloatFieldUpdateOperationsInput | number | null
+    width?: NullableFloatFieldUpdateOperationsInput | number | null
+    height?: NullableFloatFieldUpdateOperationsInput | number | null
     radius?: NullableFloatFieldUpdateOperationsInput | number | null
     text?: NullableStringFieldUpdateOperationsInput | string | null
     fontSize?: NullableIntFieldUpdateOperationsInput | number | null
     fontFamily?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
+    points?: NullableJsonNullValueInput | InputJsonValue
+    rotation?: NullableFloatFieldUpdateOperationsInput | number | null
+    strokeWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -6802,6 +6915,29 @@ export namespace Prisma {
     gte?: number | IntFieldRefInput<$PrismaModel>
     not?: NestedIntNullableFilter<$PrismaModel> | number | null
   }
+  export type JsonNullableFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<JsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonNullableFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonNullableFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
 
   export type CreatedFileScalarRelationFilter = {
     is?: CreatedFileWhereInput
@@ -6814,13 +6950,16 @@ export namespace Prisma {
     type?: SortOrder
     x?: SortOrder
     y?: SortOrder
-    w?: SortOrder
-    h?: SortOrder
+    width?: SortOrder
+    height?: SortOrder
     radius?: SortOrder
     text?: SortOrder
     fontSize?: SortOrder
     fontFamily?: SortOrder
     color?: SortOrder
+    points?: SortOrder
+    rotation?: SortOrder
+    strokeWidth?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -6828,10 +6967,12 @@ export namespace Prisma {
   export type StrokeAvgOrderByAggregateInput = {
     x?: SortOrder
     y?: SortOrder
-    w?: SortOrder
-    h?: SortOrder
+    width?: SortOrder
+    height?: SortOrder
     radius?: SortOrder
     fontSize?: SortOrder
+    rotation?: SortOrder
+    strokeWidth?: SortOrder
   }
 
   export type StrokeMaxOrderByAggregateInput = {
@@ -6840,13 +6981,15 @@ export namespace Prisma {
     type?: SortOrder
     x?: SortOrder
     y?: SortOrder
-    w?: SortOrder
-    h?: SortOrder
+    width?: SortOrder
+    height?: SortOrder
     radius?: SortOrder
     text?: SortOrder
     fontSize?: SortOrder
     fontFamily?: SortOrder
     color?: SortOrder
+    rotation?: SortOrder
+    strokeWidth?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -6857,13 +7000,15 @@ export namespace Prisma {
     type?: SortOrder
     x?: SortOrder
     y?: SortOrder
-    w?: SortOrder
-    h?: SortOrder
+    width?: SortOrder
+    height?: SortOrder
     radius?: SortOrder
     text?: SortOrder
     fontSize?: SortOrder
     fontFamily?: SortOrder
     color?: SortOrder
+    rotation?: SortOrder
+    strokeWidth?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -6871,10 +7016,12 @@ export namespace Prisma {
   export type StrokeSumOrderByAggregateInput = {
     x?: SortOrder
     y?: SortOrder
-    w?: SortOrder
-    h?: SortOrder
+    width?: SortOrder
+    height?: SortOrder
     radius?: SortOrder
     fontSize?: SortOrder
+    rotation?: SortOrder
+    strokeWidth?: SortOrder
   }
 
   export type FloatNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -6907,6 +7054,32 @@ export namespace Prisma {
     _sum?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedIntNullableFilter<$PrismaModel>
     _max?: NestedIntNullableFilter<$PrismaModel>
+  }
+  export type JsonNullableWithAggregatesFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonNullableWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedJsonNullableFilter<$PrismaModel>
+    _max?: NestedJsonNullableFilter<$PrismaModel>
   }
 
   export type EnumRoleFilter<$PrismaModel = never> = {
@@ -7374,6 +7547,29 @@ export namespace Prisma {
     _min?: NestedIntNullableFilter<$PrismaModel>
     _max?: NestedIntNullableFilter<$PrismaModel>
   }
+  export type NestedJsonNullableFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<NestedJsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>,
+        Required<NestedJsonNullableFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>
+
+  export type NestedJsonNullableFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
 
   export type NestedEnumRoleFilter<$PrismaModel = never> = {
     equals?: $Enums.Role | EnumRoleFieldRefInput<$PrismaModel>
@@ -7556,13 +7752,16 @@ export namespace Prisma {
     type: string
     x?: number | null
     y?: number | null
-    w?: number | null
-    h?: number | null
+    width?: number | null
+    height?: number | null
     radius?: number | null
     text?: string | null
     fontSize?: number | null
     fontFamily?: string | null
     color?: string | null
+    points?: NullableJsonNullValueInput | InputJsonValue
+    rotation?: number | null
+    strokeWidth?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -7572,13 +7771,16 @@ export namespace Prisma {
     type: string
     x?: number | null
     y?: number | null
-    w?: number | null
-    h?: number | null
+    width?: number | null
+    height?: number | null
     radius?: number | null
     text?: string | null
     fontSize?: number | null
     fontFamily?: string | null
     color?: string | null
+    points?: NullableJsonNullValueInput | InputJsonValue
+    rotation?: number | null
+    strokeWidth?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -7669,13 +7871,16 @@ export namespace Prisma {
     type?: StringFilter<"Stroke"> | string
     x?: FloatNullableFilter<"Stroke"> | number | null
     y?: FloatNullableFilter<"Stroke"> | number | null
-    w?: FloatNullableFilter<"Stroke"> | number | null
-    h?: FloatNullableFilter<"Stroke"> | number | null
+    width?: FloatNullableFilter<"Stroke"> | number | null
+    height?: FloatNullableFilter<"Stroke"> | number | null
     radius?: FloatNullableFilter<"Stroke"> | number | null
     text?: StringNullableFilter<"Stroke"> | string | null
     fontSize?: IntNullableFilter<"Stroke"> | number | null
     fontFamily?: StringNullableFilter<"Stroke"> | string | null
     color?: StringNullableFilter<"Stroke"> | string | null
+    points?: JsonNullableFilter<"Stroke">
+    rotation?: FloatNullableFilter<"Stroke"> | number | null
+    strokeWidth?: FloatNullableFilter<"Stroke"> | number | null
     createdAt?: DateTimeFilter<"Stroke"> | Date | string
     updatedAt?: DateTimeFilter<"Stroke"> | Date | string
   }
@@ -7920,13 +8125,16 @@ export namespace Prisma {
     type: string
     x?: number | null
     y?: number | null
-    w?: number | null
-    h?: number | null
+    width?: number | null
+    height?: number | null
     radius?: number | null
     text?: string | null
     fontSize?: number | null
     fontFamily?: string | null
     color?: string | null
+    points?: NullableJsonNullValueInput | InputJsonValue
+    rotation?: number | null
+    strokeWidth?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -7957,13 +8165,16 @@ export namespace Prisma {
     type?: StringFieldUpdateOperationsInput | string
     x?: NullableFloatFieldUpdateOperationsInput | number | null
     y?: NullableFloatFieldUpdateOperationsInput | number | null
-    w?: NullableFloatFieldUpdateOperationsInput | number | null
-    h?: NullableFloatFieldUpdateOperationsInput | number | null
+    width?: NullableFloatFieldUpdateOperationsInput | number | null
+    height?: NullableFloatFieldUpdateOperationsInput | number | null
     radius?: NullableFloatFieldUpdateOperationsInput | number | null
     text?: NullableStringFieldUpdateOperationsInput | string | null
     fontSize?: NullableIntFieldUpdateOperationsInput | number | null
     fontFamily?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
+    points?: NullableJsonNullValueInput | InputJsonValue
+    rotation?: NullableFloatFieldUpdateOperationsInput | number | null
+    strokeWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -7973,13 +8184,16 @@ export namespace Prisma {
     type?: StringFieldUpdateOperationsInput | string
     x?: NullableFloatFieldUpdateOperationsInput | number | null
     y?: NullableFloatFieldUpdateOperationsInput | number | null
-    w?: NullableFloatFieldUpdateOperationsInput | number | null
-    h?: NullableFloatFieldUpdateOperationsInput | number | null
+    width?: NullableFloatFieldUpdateOperationsInput | number | null
+    height?: NullableFloatFieldUpdateOperationsInput | number | null
     radius?: NullableFloatFieldUpdateOperationsInput | number | null
     text?: NullableStringFieldUpdateOperationsInput | string | null
     fontSize?: NullableIntFieldUpdateOperationsInput | number | null
     fontFamily?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
+    points?: NullableJsonNullValueInput | InputJsonValue
+    rotation?: NullableFloatFieldUpdateOperationsInput | number | null
+    strokeWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -7989,13 +8203,16 @@ export namespace Prisma {
     type?: StringFieldUpdateOperationsInput | string
     x?: NullableFloatFieldUpdateOperationsInput | number | null
     y?: NullableFloatFieldUpdateOperationsInput | number | null
-    w?: NullableFloatFieldUpdateOperationsInput | number | null
-    h?: NullableFloatFieldUpdateOperationsInput | number | null
+    width?: NullableFloatFieldUpdateOperationsInput | number | null
+    height?: NullableFloatFieldUpdateOperationsInput | number | null
     radius?: NullableFloatFieldUpdateOperationsInput | number | null
     text?: NullableStringFieldUpdateOperationsInput | string | null
     fontSize?: NullableIntFieldUpdateOperationsInput | number | null
     fontFamily?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
+    points?: NullableJsonNullValueInput | InputJsonValue
+    rotation?: NullableFloatFieldUpdateOperationsInput | number | null
+    strokeWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

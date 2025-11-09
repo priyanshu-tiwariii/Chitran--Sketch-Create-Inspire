@@ -1,481 +1,297 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ChevronDown, Check, LinkIcon, Mail, Users, Trash2, Pencil } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { ChevronDown, Check, Link as LinkIcon, Mail, Users, Trash2, Pencil, MoreHorizontal } from 'lucide-react';
 import axios from 'axios';
 import { COLLAB_MODE_URL, COLLAB_URL } from '../lib/apiEndPoints';
 import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
-import { AlertModal } from "./AlertModal"
-import { useSelector,useDispatch } from 'react-redux';
+import { AlertModal } from "./AlertModal";
+import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../redux/store';
-import { setCollaborativeRole,setIsCollaborative} from '../redux/collaborativeSlice';
-import { useRouter } from 'next/navigation';
+import { setCollaborativeRole, setIsCollaborative } from '../redux/collaborativeSlice';
 import CanvasRestricted from './CanvasRestricted';
 import { SingletonSocket } from '../lib/socket';
+import * as Popover from '@radix-ui/react-popover';
+import * as Tabs from '@radix-ui/react-tabs';
 
-
+// --- TYPE DEFINITIONS ---
 interface Collaborator {
-  id: string;
-  fileId: string;
-  userId: string;
-  role: string;
-  joinedAt: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    profilePhoto: string;
-  };
+  id: string; fileId: string; userId: string; role: string; joinedAt: string;
+  user: { id: string; name: string; email: string; profilePhoto: string; };
 }
+const ROLES = [{ value: 'USER', label: 'Can View' }, { value: 'EDITOR', label: 'Can Edit' }];
 
+// --- MAIN COMPONENT ---
 const ShareButton = () => {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [email, setEmail] = useState('');
-  const [selectedMode, setSelectedMode] = useState('USER');
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [shareLink, setShareLink] = useState('');
-  const [isMobile, setIsMobile] = useState(false);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
-  const [editingCollaboratorId, setEditingCollaboratorId] = useState<string | null>(null);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertType, setAlertType] = useState<'success' | 'error'>('success');
   const [showAlert, setShowAlert] = useState(false);
-  const [showRestricted, setShowRestricted] = useState(false);
-  const router = useRouter();
-  
   
   const dispatch = useDispatch();
-  const {collaborativeRole, isCollaborative} =  useSelector((state: RootState) => state.collaborative);
-
-
+  const { collaborativeRole, isCollaborative } = useSelector((state: RootState) => state.collaborative);
   const params = useParams();
   const { data: session } = useSession();
-  const fileId = params.fileId;
+  const fileId = params.fileId as string;
+  const isCurrentUserAdmin = collaborativeRole === 'ADMIN';
 
-  const modes = [
-    { value: 'USER', label: 'Can View' },
-    { value: 'EDITOR', label: 'Can Edit' }
-  ];
+  // --- API & DATA FETCHING LOGIC ---
+  const fetchCollaborators = useCallback(async () => {
+    try {
+      const res = await axios.get(`${COLLAB_URL}/${fileId}`, {
+        headers: { Authorization: `${session?.user?.token}` },
+      });
+      if (!res.data.success) throw new Error('Failed to fetch collaborators');
+      const fetchedCollaborators: Collaborator[] = res.data.data;
+      setCollaborators(fetchedCollaborators);
+      const currentUser = fetchedCollaborators.find(c => c.userId === session?.user?.id);
+      dispatch(setCollaborativeRole(currentUser?.role || 'USER'));
+    } catch (error) {
+      console.error("Failed to fetch collaborators:", error);
+    }
+  }, [fileId, session?.user?.id, session?.user?.token, dispatch]);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-//Fetch collaborative mode status and collaborators list ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  const fetchCollaborators = async () => {
-    const res = await axios.get(`${COLLAB_URL}/${fileId}`, {
-      headers: { Authorization: `${session?.user?.token}` },
-    });
-    if (!res.data.success) throw new Error('Failed to fetch collaborators');
-    const collaborators: Collaborator[] = res.data.data;
-    setCollaborators(collaborators);
-    const currentUser = collaborators.find(c => c.userId === session?.user?.id);
-    dispatch(setCollaborativeRole(currentUser?.role || 'USER'));
-  };
-//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  
-//Handle collaborative mode toggle ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-const handleCollaborative = async () => {
-  try {
-    const newCollabState = !isCollaborative;
-    const res = await axios.post(
-      `${COLLAB_MODE_URL}/${fileId}`,
-      { collabMode: newCollabState },
-      { headers: { Authorization: `${session?.user?.token}` } }
-    );
-
-    if (!res?.data.success) {
-      throw new Error(res.data.message || 'Failed to update collaborative mode');
-    }
-
-    // Socket management ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-   
-    if(session?.user?.token &&  res.data.success && !isCollaborative){
-  
-     
-      const socket = SingletonSocket.getInstance(session?.user?.token);
-       
-    if (newCollabState && socket) {
-      console.log('Turning collaboration mode ON');
-      if (!socket.connected) {
-        socket.connect();
-      }
-      socket.emit('join-file', fileId, session?.user?.id);
-    } else {
-      console.log('Turning collaboration mode OFF');
-    }
-    
-    }
-   
-   
-
-    dispatch(setIsCollaborative(newCollabState));
-
- 
-    setAlertMessage(`Collaborative mode ${newCollabState ? 'enabled' : 'disabled'} successfully!`);
-    setAlertType('success');
-    setIsDropdownOpen(false);
-    setEmail('');
-
-  } catch (error) {
-    console.error('Collaboration toggle error:', error);
-    setAlertMessage(
-      axios.isAxiosError(error) 
-        ? error.response?.data?.error || 'Failed to update collaborative mode'
-        : 'Error in updating collaborative mode'
-    );
-    setAlertType('error');
-  } finally {
-    setShowAlert(true);
-  }
-};
-//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  
-
-// Chechk collabMode is on or not and if on then fetch collab list ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- useEffect(() => {
-    const fetchData = async () => {
+    const fetchInitialData = async () => {
       try {
         const res = await axios.get(`${COLLAB_MODE_URL}/${fileId}`, {
           headers: { Authorization: `${session?.user?.token}` },
         });
-        if (!res.data.success) throw new Error('Failed to fetch collaborative mode status');
-        const isCollabModeOn = res.data.data
-        console.log("COLLALAA", isCollabModeOn)
-        if (isCollabModeOn) {
+        if (res.data.success && res.data.data) {
+          dispatch(setIsCollaborative(true));
           await fetchCollaborators();
+        } else {
+          dispatch(setIsCollaborative(false));
         }
       } catch (error) {
-        console.error('Error fetching collaborative mode:', error);
+        console.error('Error fetching initial collab status:', error);
       }
     };
-    fetchData();
-  }
-, [fileId, session?.user?.token, dispatch]);
-//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    if (session?.user?.token) {
+      fetchInitialData();
+    }
+  }, [fileId, session?.user?.token, dispatch, fetchCollaborators]);
 
-// Invite collaborator and fetch the list after adding collabarators ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  const handleInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAlert = (message: string, type: 'success' | 'error') => {
+    setAlertMessage(message);
+    setAlertType(type);
+    setShowAlert(true);
+  };
+
+  // --- ACTION HANDLERS ---
+  const handleCollaborativeToggle = async () => {
+    const newCollabState = !isCollaborative;
     try {
-      const res = await axios.post(
-        `${COLLAB_URL}/${fileId}`,
-        {
-          email: email,
-          role: selectedMode,
-        },
-        {
-          headers: {
-            Authorization: `${session?.user?.token}`,
-          },
-        }
-      );
-      if (!res.data.success) throw new Error('Failed to send invite');
-      setShareLink(res?.data?.data);
-      setShowSuccessModal(true);
-      setIsDropdownOpen(false);
-      setEmail('');
-      setSelectedMode('USER');
-      setAlertMessage('Invite sent successfully!');
-      setAlertType('success');
-      setShowAlert(true);
-
-     
-      await fetchCollaborators(); 
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-       setAlertMessage(error.response?.data?.error || 'An error occurred while sending the invite.');
-        setAlertType('error');
-        setShowAlert(true);
-
-      } else {
-        setAlertMessage('Error in sending invite');
-        setAlertType('error');
-        setShowAlert(true);
+      const res = await axios.post(`${COLLAB_MODE_URL}/${fileId}`, { collabMode: newCollabState }, { headers: { Authorization: `${session?.user?.token}` } });
+      if (!res.data.success) throw new Error(res.data.message);
+      
+      const socket = SingletonSocket.getInstance(session!.user!.token!);
+      if (newCollabState) {
+        if (!socket.connected) socket.connect();
+        socket.emit('join-file', fileId, session!.user!.id!);
       }
+      
+      dispatch(setIsCollaborative(newCollabState));
+      handleAlert(`Collaborative mode ${newCollabState ? 'enabled' : 'disabled'}.`, 'success');
+      if (newCollabState) await fetchCollaborators(); else setCollaborators([]);
+    } catch (error) {
+      handleAlert(`Failed to toggle mode: ${error}`, 'error');
     }
   };
-//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
-//Remove collaborator --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  const handleRemoveCollaborator = async (collabId: string,email:string) => {
+  const handleInvite = async (email: string, role: string) => {
     try {
-      const res = await axios.delete(`${COLLAB_URL}/${fileId}`,{
-        data :{
-          email: email,
-         },
-          headers: {
-            Authorization: `${session?.user?.token}`,
-          },
-        params: {
-          collabId: collabId,
-        },
-      }
+      await axios.post(`${COLLAB_URL}/${fileId}`, { email, role }, { headers: { Authorization: `${session?.user?.token}` } });
+      handleAlert('Invite sent successfully!', 'success');
+      await fetchCollaborators();
+      return true;
+    } catch (error) {
+      handleAlert(axios.isAxiosError(error) ? error.response?.data?.error : 'Error sending invite.', 'error');
+      return false;
+    }
+  };
+
+  const handleUpdateRole = async (collabId: string, email: string, newRole: string) => {
+    try {
+      await axios.patch(`${COLLAB_URL}/${fileId}`, { email, role: newRole }, { params: { collabId }, headers: { Authorization: `${session?.user?.token}` } });
+      setCollaborators(prev => prev.map(c => (c.id === collabId ? { ...c, role: newRole } : c)));
+      handleAlert('Role updated successfully.', 'success');
+    } catch (error) {
+      handleAlert(axios.isAxiosError(error) ? error.response?.data?.error : 'Failed to update role.', 'error');
+    }
+  };
+  
+  const handleRemoveCollaborator = async (collabId: string, email: string) => {
+    try {
+      await axios.delete(`${COLLAB_URL}/${fileId}`, { data: { email }, headers: { Authorization: `${session?.user?.token}` }, params: { collabId } });
+      setCollaborators(prev => prev.filter(c => c.id !== collabId));
+      handleAlert('Collaborator removed.', 'success');
+    } catch (error) {
+      handleAlert(axios.isAxiosError(error) ? error.response?.data?.error : 'Failed to remove collaborator.', 'error');
+    }
+  };
+  
+  const copyShareLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    handleAlert('Link copied to clipboard!', 'success');
+  };
+
+  if (!isCollaborative && !isCurrentUserAdmin) {
+    return <CanvasRestricted message="This canvas is private. Collaboration mode is turned off and you're not the admin." />;
+  }
+
+  // --- RENDER ---
+  return (
+    <div className="relative">
+      <Popover.Root open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+        <Popover.Trigger asChild>
+          <button className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-zinc-200 bg-zinc-800/80 hover:bg-zinc-700/80 transition-colors rounded-lg">
+            <Users size={16} /> Share
+          </button>
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Content sideOffset={8} align="end" className="z-[100] w-[24rem] bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl text-white animate-in fade-in-0 zoom-in-95">
+            <SharePopoverContent
+              isCollaborative={isCollaborative}
+              isCurrentUserAdmin={isCurrentUserAdmin}
+              collaborators={collaborators}
+              onInvite={handleInvite}
+              onToggle={handleCollaborativeToggle}
+              onCopyLink={copyShareLink}
+              onUpdateRole={handleUpdateRole}
+              onRemove={handleRemoveCollaborator}
+              sessionUserEmail={session?.user?.email}
+            />
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+
+      {showAlert && <AlertModal message={alertMessage} type={alertType} onClose={() => setShowAlert(false)} />}
+    </div>
+  );
+};
+
+// --- SUB-COMPONENTS ---
+
+const SharePopoverContent = ({ isCollaborative, isCurrentUserAdmin, collaborators, onInvite, onToggle, onCopyLink, onUpdateRole, onRemove, sessionUserEmail }: any) => (
+  <Tabs.Root defaultValue="invite" className="flex flex-col">
+    <div className="p-4 space-y-3">
+      <h3 className="text-lg font-bold text-zinc-50">Share this canvas</h3>
+      <div className="flex items-center gap-2 p-1 bg-zinc-800 rounded-lg">
+        <input type="text" readOnly value={isCollaborative ? "Anyone with the link can view" : "Only invited members can access"} className="flex-1 bg-transparent px-2 text-xs text-zinc-400 outline-none" />
+        <button onClick={onCopyLink} className="px-2.5 py-1 text-xs font-semibold bg-zinc-700 hover:bg-zinc-600 rounded-md transition-colors">
+          Copy Link
+        </button>
+      </div>
+    </div>
+    <Tabs.List className="flex border-b border-zinc-700 px-4">
+      <Tabs.Trigger value="invite" className="px-3 py-2 text-sm font-medium text-zinc-400 hover:text-white data-[state=active]:text-white data-[state=active]:shadow-[inset_0_-1px_0_0,0_1px_0_0] data-[state=active]:shadow-current transition-colors">Invite</Tabs.Trigger>
+      <Tabs.Trigger value="members" className="px-3 py-2 text-sm font-medium text-zinc-400 hover:text-white data-[state=active]:text-white data-[state=active]:shadow-[inset_0_-1px_0_0,0_1px_0_0] data-[state=active]:shadow-current transition-colors">Members</Tabs.Trigger>
+    </Tabs.List>
     
-    );
-      if (!res.data.success) throw new Error('Failed to remove collaborator');
-      setAlertMessage('Collaborator removed successfully');
-      setAlertType('success');
-      setShowAlert(true);
+    <div className="p-4 max-h-[40vh] overflow-y-auto">
+      <Tabs.Content value="invite"><InviteTab onInvite={onInvite} isEnabled={isCollaborative && isCurrentUserAdmin} /></Tabs.Content>
+      <Tabs.Content value="members"><MembersTab collaborators={collaborators} onUpdateRole={onUpdateRole} onRemove={onRemove} isCurrentUserAdmin={isCurrentUserAdmin} sessionUserEmail={sessionUserEmail} /></Tabs.Content>
+    </div>
 
-      setCollaborators((prev) => prev.filter((collab) => collab.id !== collabId));
+    {isCurrentUserAdmin && (
+      <div className="flex items-center justify-between p-4 border-t border-zinc-700 bg-zinc-900/50">
+        <div className="text-sm">
+          <p className="font-semibold text-zinc-200">Live Collaboration</p>
+          <p className="text-xs text-zinc-400">{isCollaborative ? 'Enabled' : 'Disabled'}</p>
+        </div>
+        <button onClick={onToggle} className={`relative h-6 w-11 rounded-full transition-colors ${isCollaborative ? 'bg-orange-500' : 'bg-zinc-700'}`}>
+          <span className={`absolute top-0.5 left-0.5 h-5 w-5 bg-white rounded-full transition-transform ${isCollaborative ? 'translate-x-5' : ''}`} />
+        </button>
+      </div>
+    )}
+  </Tabs.Root>
+);
 
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.log(error.response?.data?.error);
-        setAlertMessage(error.response?.data?.error || 'An error occurred while removing the collaborator.');
-        setAlertType('error');
-        setShowAlert(true);
-      } else {
-        setAlertMessage('Error in removing collaborator');
-        setAlertType('error');
-        setShowAlert(true);
-      }
-    }
-  }
-//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-//Update collaborator role---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  const handleUpdateRole = async (collabId: string, newRole: string) => {
-    try {
-      const collaborator = collaborators.find(c => c.id === collabId);
-      if (!collaborator) throw new Error('Collaborator not found');
-
-      const res = await axios.patch(
-        `${COLLAB_URL}/${fileId}`,
-        {
-          email: collaborator.user.email,
-          role: newRole,
-        },
-        {
-          params: { collabId },
-          headers: { Authorization: `${session?.user?.token}` },
-        }
-      );
-
-      if (!res.data.success) throw new Error('Failed to update role');
-
-      setCollaborators(prev =>
-        prev.map(collab =>
-          collab.id === collabId ? { ...collab, role: newRole } : collab
-        )
-      );
-      setEditingCollaboratorId(null);
-      setAlertMessage('Role updated successfully');
-      setAlertType('success');
-      setShowAlert(true);
-    } catch (error) {
-   
-      if (axios.isAxiosError(error)) {
-        setAlertMessage(error.response?.data?.error || 'Failed to update role.');
-      } else {
-        setAlertMessage('An error occurred while updating the role.');
-      }
-      setAlertType('error');
-      setShowAlert(true);
+const InviteTab = ({ onInvite, isEnabled }: { onInvite: (email: string, role: string) => Promise<boolean>, isEnabled: boolean }) => {
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('USER');
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const success = await onInvite(email, role);
+    if (success) {
+      setEmail('');
+      setRole('USER');
     }
   };
-//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-//Invite is allowed only by admin---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-const isAllowed = () => collaborativeRole === 'ADMIN';
-const isCollaborativeModeAllowed = isAllowed();
-// ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  if(collaborativeRole !== `ADMIN` && isCollaborative === false) {
-    return <CanvasRestricted message="This canvas is private right now. Collaboration mode is turned off and you're not the admin." />;
+  if (!isEnabled) {
+    return <div className="text-center text-sm text-zinc-400 py-8">Enable Live Collaboration to invite members.</div>;
   }
   
   return (
-    <div className="relative z-50">
-      <button
-        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-        className="flex items-center gap-2 px-4 py-3 lg:py-4 text-white bg-white/20 hover:bg-orange-600 transition-all duration-200 rounded-xl shadow-md"
-      >
-        {isMobile ? <Users size={18} /> : <LinkIcon size={20} />}
-        {isMobile ? '' : 'Share'}
-        <ChevronDown
-          size={16}
-          className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
-        />
-      </button>
-
-      {isDropdownOpen && (
-        <div className="absolute right-0 mt-2 w-[22rem] max-h-[80vh] overflow-y-auto bg-white/90 backdrop-blur-xl rounded-xl shadow-2xl border border-orange-100 p-4 space-y-4">
-          <div className={`flex items-center justify-between ${isCollaborativeModeAllowed ? '' : 'hidden'}`}>
-            <span className="text-lg font-semibold text-black/80">Collaborative Mode</span>
-            <button
-              onClick={handleCollaborative}
-              className={`relative h-6 w-11 rounded-full transition-colors duration-300 ${
-                isCollaborative? 'bg-orange-500' : 'bg-black/30'
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transform transition-transform duration-300 ${
-                  isCollaborative ? 'translate-x-5' : ''
-                }`}
-              />
-            </button>
-          </div>
-
-        
-            
-                    
-
-              {isCollaborative && (
-            <>
-              <form onSubmit={handleInvite} className={` ${isCollaborativeModeAllowed ? '' : 'hidden'} space-y-4`}>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                  <div className="relative">
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter email"
-                      className="w-full px-4 py-2 pr-10 border rounded-lg border-gray-300 text-gray-600 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
-                    />
-                    <Mail size={16} className="absolute top-2.5 right-3 text-gray-400" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Permission</label>
-                  <select
-                    value={selectedMode}
-                    onChange={(e) => setSelectedMode(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 bg-white focus:ring-2 focus:ring-orange-500"
-                  >
-                    {modes.map((mode) => (
-                      <option key={mode.value} value={mode.value}>
-                        {mode.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all"
-                >
-                  Send Invite
-                </button>
-              </form>
-
-        {collaborators.length > 0 && (
-      <div className="mt-4 space-y-2">
-        <h3 className="text-sm font-semibold text-gray-800">Members</h3>
-        <div className="divide-y divide-gray-200 max-h-40 overflow-y-auto">
-          {collaborators.map((collab) => (
-            <div key={collab.id} className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-3 flex-1">
-                <Image
-                  src={collab.user.profilePhoto}
-                  alt={collab.user.name}
-                  width={36}
-                  height={36}
-                  className="rounded-full object-cover"
-                />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-800">{collab.user.name}</p>
-                  <p className='text-xs font-light text-gray-600 lowercase'>{collab.role}</p>
-                  <div className="flex items-center gap-2">
-                    {editingCollaboratorId === collab.id && (
-                      <select
-                        value={collab.role}
-                        onChange={(e) => handleUpdateRole(collab.id, e.target.value)}
-                        className="text-xs text-gray-500 bg-white border rounded px-1 py-0.5"
-                      >
-                        {modes.map((mode) => (
-                          <option key={mode.value} value={mode.value}>
-                            {mode.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) }
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => setEditingCollaboratorId(
-                    editingCollaboratorId === collab.id ? null : collab.id
-                  )}
-                  className={`p-1.5 rounded-full hover:bg-gray-200 transition ${isAllowed() ? '' : 'hidden'}`}
-                >
-                  <Pencil size={14} className="text-gray-600" />
-                </button>
-                <button 
-                  className={`p-1.5 rounded-full hover:bg-red-100 transition ${isAllowed() ? '' : 'hidden'}`}
-                  disabled={collab.user.email === session?.user?.email} 
-                  onClick={() => handleRemoveCollaborator(collab.id, collab.user.email)}
-                >
-                  <Trash2 size={14} className="text-red-500" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <p className="text-sm text-zinc-400">Invite new members to collaborate on this canvas.</p>
+      <div className="relative">
+        <Mail size={16} className="absolute top-1/2 left-3 -translate-y-1/2 text-zinc-500" />
+        <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="name@example.com" className="w-full pl-9 pr-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-200 focus:ring-2 focus:ring-orange-500 focus:outline-none" />
       </div>
-    )}
-            </>
-          )}
-       
-   
-
-      
+      <div className="flex items-center gap-2">
+        <select value={role} onChange={e => setRole(e.target.value)} className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:ring-2 focus:ring-orange-500 focus:outline-none">
+          {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+        </select>
+        <button type="submit" className="px-4 py-2 bg-orange-500 text-white text-sm font-semibold rounded-lg hover:bg-orange-600 transition-colors">Invite</button>
       </div>
-    )
+    </form>
+  );
+};
+
+const MembersTab = ({ collaborators, onUpdateRole, onRemove, isCurrentUserAdmin, sessionUserEmail }: any) => {
+  if (collaborators.length === 0) {
+    return <div className="text-center text-sm text-zinc-400 py-8">No members have been invited yet.</div>;
   }
-  {showAlert && (
-        <AlertModal
-          message={alertMessage}
-          type={alertType}
-          onClose={() => setShowAlert(false)}
-        />
+  return (
+    <div className="space-y-2">
+      {collaborators.map((c: Collaborator) => (
+        <CollaboratorItem key={c.id} collab={c} onUpdateRole={onUpdateRole} onRemove={onRemove} isCurrentUserAdmin={isCurrentUserAdmin} sessionUserEmail={sessionUserEmail} />
+      ))}
+    </div>
+  );
+};
+
+const CollaboratorItem = ({ collab, onUpdateRole, onRemove, isCurrentUserAdmin, sessionUserEmail }: any) => (
+  <div className="flex items-center justify-between p-2 rounded-lg hover:bg-zinc-800">
+    <div className="flex items-center gap-3">
+      <Image src={collab.user.profilePhoto} alt={collab.user.name} width={32} height={32} className="rounded-full object-cover" />
+      <div>
+        <p className="text-sm font-semibold text-zinc-200">{collab.user.name}</p>
+        <p className="text-xs text-zinc-400">{collab.user.email}</p>
+      </div>
+    </div>
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-zinc-300">{ROLES.find(r => r.value === collab.role)?.label}</span>
+      {isCurrentUserAdmin && collab.user.email !== sessionUserEmail && (
+        <Popover.Root>
+          <Popover.Trigger asChild><button className="p-1.5 rounded-md hover:bg-zinc-700"><MoreHorizontal size={16} className="text-zinc-400" /></button></Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content sideOffset={5} className="z-[110] w-48 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg p-1">
+              <p className="px-2 py-1.5 text-xs font-semibold text-zinc-400">Change Role</p>
+              {ROLES.map(r => (
+                <Popover.Close key={r.value} asChild>
+                  <button onClick={() => onUpdateRole(collab.id, collab.user.email, r.value)} className="w-full text-left px-2 py-1.5 text-sm text-zinc-200 rounded hover:bg-zinc-700 flex items-center justify-between">
+                    {r.label} {collab.role === r.value && <Check size={14} />}
+                  </button>
+                </Popover.Close>
+              ))}
+              <div className="h-px bg-zinc-700 my-1" />
+              <Popover.Close asChild>
+                <button onClick={() => onRemove(collab.id, collab.user.email)} className="w-full text-left px-2 py-1.5 text-sm text-red-400 hover:bg-red-500/10 rounded">Remove</button>
+              </Popover.Close>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
       )}
-      {showSuccessModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100]">
-          <div className="bg-white p-6 sm:p-8 rounded-3xl w-full max-w-md mx-4 shadow-2xl border border-gray-100 transition-all duration-300 animate-fade-in">
-            <div className="text-center space-y-4">
-              <div className="w-12 h-12 mx-auto flex items-center justify-center rounded-full bg-orange-100">
-                <Check className="w-6 h-6 text-orange-500" />
-              </div>
-              <h3 className="text-xl sm:text-2xl font-semibold text-gray-800">Invite Sent 🎉</h3>
-              <p className="text-sm text-gray-500">Your link has been generated. Share it with your team!</p>
-
-              <div className="bg-gray-100 px-4 py-2 rounded-lg flex items-center justify-between group border border-gray-200">
-                <span className="text-sm text-gray-700 truncate">{shareLink}</span>
-                <button
-                  onClick={() => navigator.clipboard.writeText(shareLink)}
-                  className="ml-3 p-1.5 rounded-md bg-white shadow-sm hover:bg-gray-100 transition"
-                >
-                  <LinkIcon className="w-4 h-4 text-gray-500 group-hover:text-gray-700" />
-                </button>
-              </div>
-
-              <button
-                onClick={() => setShowSuccessModal(false)}
-                className="w-full py-2.5 mt-2 bg-orange-500 text-white rounded-xl text-sm font-medium shadow-md hover:bg-orange-600 transition-all"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-        )}
+    </div>
   </div>
+);
 
-  
-  )
-}
-
-export default ShareButton
+export default ShareButton;
