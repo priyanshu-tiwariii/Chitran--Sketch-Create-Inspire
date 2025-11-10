@@ -50,6 +50,7 @@ const subscribedChannels = new Set<string>();
                 console.error("Invalid join-file request");
                 return socket.disconnect(true);
             }
+
             
 
             try {
@@ -69,6 +70,69 @@ const subscribedChannels = new Set<string>();
             } catch (error) {
                 console.error('Join-file error:', error);
             }
+            });
+        //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        // Leave file room ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------   
+            socket.on("leave-file", (fileId: string) => {
+                try {
+                    socket.leave(fileId);
+                    console.log(`[Socket] User ${socket.id} left room ${fileId}`);
+                } catch (error) {
+                    console.error(`[Socket] Error leaving room ${fileId}:`, error);
+                }
+            });
+        //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        //Handle shape locking ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------    
+            socket.on("shape:lock", async (payload: { fileId: string, shapeId: string, userId: string }) => {
+                const { fileId, shapeId, userId } = payload;
+                const lockKey = `lock:${fileId}:${shapeId}`;
+                const isLockAcquired = await redis.set(lockKey, userId, "EX", 10, "NX");
+                if (isLockAcquired) {
+                    console.log(`[Socket] User ${userId} Locked ${shapeId}`);
+                    io.to(fileId).emit("shape:is-locked", { shapeId, userId });
+                } else {
+                    const lockedBy = await redis.get(lockKey);
+                    socket.emit("shape:lock-failed", { shapeId, userId: lockedBy });
+                }
+            });
+        
+
+        // Handle shape lock refresh ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+            socket.on("shape:lock-refresh", async (payload: { fileId: string, shapeId: string, userId: string }) => {
+            const { fileId, shapeId, userId } = payload;
+            const lockKey = `lock:${fileId}:${shapeId}`;
+            const lockHolder = await redis.get(lockKey);
+            if (lockHolder === userId) {
+                await redis.expire(lockKey, 10); 
+            }
+            });
+        //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+        //Handle shape unlocking ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+            socket.on("shape:unlock", async (payload: { fileId: string, shapeId: string, userId: string }) => {
+            const { fileId, shapeId, userId } = payload;
+            const lockKey = `lock:${fileId}:${shapeId}`;
+            const lockHolder = await redis.get(lockKey);
+
+            if (lockHolder === userId) {
+                console.log(`[Socket] User ${userId} UNLOCKED ${shapeId}`);
+                await redis.del(lockKey); 
+                io.to(fileId).emit("shape:is-unlocked", { shapeId });
+            }
+            });
+        //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+        // Handle cursor movements ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+            socket.on("cursor:move", (payload: { fileId: string, position: { x: number, y: number }, user: { name: string, email: string } }) => {
+            const { fileId, position, user } = payload;
+            
+            // This is a high-frequency event.
+            // We just broadcast it to *others* in the room.
+            socket.to(fileId).emit("cursor:update", {
+                userId: socket.id, // Use socket.id as the unique key for the cursor
+                position,
+                user
+            });
             });
         //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -140,6 +204,8 @@ const subscribedChannels = new Set<string>();
                         userId: user.id,
                         name: user.name
                     });
+
+                    io.emit("cursor:leave", { userId: socket.id });
                 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
                 // Cleanup if no active users ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------

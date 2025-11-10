@@ -9,11 +9,13 @@ type ShapeRendererProps = {
   isSelected: boolean;
   isDrawing: boolean;
   selectedTool: string;
-  onSelect: (isDblClick?: boolean) => void;
+  isLocked: boolean;
+ onSelectRequest: () => void; 
+  onDeleteRequest: () => void;
   onChange: (newAttrs: Shape) => void;
 };
 
-export const ShapeRenderer = memo(({ shape, isSelected, isDrawing, selectedTool,  onSelect, onChange }: ShapeRendererProps) => {
+export const ShapeRenderer = memo(({ shape, isSelected, isDrawing, selectedTool, isLocked , onSelectRequest, onDeleteRequest, onChange }: ShapeRendererProps) => {
   const shapeRef = useRef<any>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
 
@@ -112,9 +114,25 @@ const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
 
   const commonProps = {
     id: shape.id,
-    onClick: () => onSelect(false),
-    onTap: () => onSelect(false),
-    onDblClick: () => onSelect(true), 
+    onClick: () => {
+      if (selectedTool === 'hand') {
+        onSelectRequest();
+      } else if (selectedTool === 'eraser') {
+        onDeleteRequest();
+      }
+    },
+    onTap: () => { 
+      if (selectedTool === 'hand') {
+        onSelectRequest();
+      } else if (selectedTool === 'eraser') {
+        onDeleteRequest();
+      }
+    },
+   onDblClick: (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (shape.type === 'text' && isSelected) { 
+        // handleTextDoubleClick(e);
+      }
+    },
     onDragEnd: handleDragEnd,
     onTransformEnd: handleTransformEnd,
     draggable: isSelected,
@@ -123,9 +141,11 @@ const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     strokeWidth: shape.strokeWidth,
     onMouseEnter: () => {
       if (isDrawing && selectedTool === 'eraser') {
-        onSelect(false);
+        onDeleteRequest();
       }
     },
+    opacity: isLocked ? 0.5 : 1, 
+    listening: !isLocked,
   };
 
   const renderShape = () => {
@@ -180,6 +200,19 @@ const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
                 }
                 return newBox;
             }}
+        />
+      )}
+      {isLocked && (
+        <Rect
+          x={shape.x}
+          y={shape.y}
+          width={shape.width}
+          height={shape.height}
+          stroke="#f00" 
+          strokeWidth={2}
+          dash={[4, 4]}
+          listening={false}
+          rotation={shape.rotation || 0}
         />
       )}
     </>

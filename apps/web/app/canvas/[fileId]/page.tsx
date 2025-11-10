@@ -18,12 +18,20 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../../redux/store';
 import { setCollaborativeRole, setIsCollaborative } from '../../../redux/collaborativeSlice';
 import { ShapeRenderer } from '../../../components/ShapeRenderer';
+import { CursorRenderer } from '../../../components/CursorRenderer';
 
 declare module 'next-auth' {
   interface Session {
     user: { id?: string | null; name?: string | null; email?: string | null; image?: string | null; token?: string | null; };
   }
 }
+type Cursor = {
+  position: { x: number, y: number };
+  user: { name: string, email: string };
+};
+type Cursors = Record<string, Cursor>; 
+type Locks = Record<string, string>;
+
 
 export default function CanvasPage() {
   // --- State Management ---
@@ -37,6 +45,9 @@ export default function CanvasPage() {
 
   const [viewPortTransform, setViewPortTransform] = useState({ scale: 1, x: 0, y: 0 });
   const [isDrawing, setIsDrawing] = useState(false);
+
+  const [lockedShapes, setLockedShapes] = useState<Locks>({});
+  const [cursors, setCursors] = useState<Cursors>({});
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -192,6 +203,53 @@ export default function CanvasPage() {
             socket.on('strokes:delete', (payload: { strokes: string[] }) => {
               setShapesAndRef(prev => prev.filter(s => !payload.strokes.includes(s.id)));
             });
+
+            socket.on("shape:is-locked", (payload: { shapeId: string, userId: string }) => {
+              setLockedShapes(prev => ({ ...prev, [payload.shapeId]: payload.userId }));
+              if (payload.userId === session?.user?.id) {
+                setSelectedShapeId(payload.shapeId);
+              }
+            });
+
+            socket.on("shape:is-unlocked", (payload: { shapeId: string }) => {
+              setLockedShapes(prev => {
+                const next = { ...prev };
+                delete next[payload.shapeId];
+                return next;
+              });
+            });
+
+            socket.on("shape:lock-failed", (payload: { shapeId: string }) => {
+              toast.error("Another user is editing this shape.");
+            });
+
+            
+           socket.on("cursor:update", (payload: any) => {
+              try {
+                
+                const userId = payload.userId ?? payload.user?.id ?? payload.id ?? null;
+                if (!userId) return; // nothing useful to store
+
+                const position = payload.position ?? { x: 0, y: 0 };
+                const user = {
+                  name: payload.user?.name ?? payload.name ?? 'Anonymous',
+                  email: payload.user?.email ?? payload.email ?? ''
+                };
+
+                setCursors(prev => ({ ...prev, [userId]: { position, user } }));
+              } catch (err) {
+                console.warn('Malformed cursor:update payload', payload, err);
+              }
+            });
+
+
+            socket.on("cursor:leave", (payload: { userId: string }) => {
+              setCursors(prev => {
+                const next = { ...prev };
+                delete next[payload.userId];
+                return next;
+              });
+            });
           }
         }
       } catch (error) { 
@@ -209,9 +267,15 @@ export default function CanvasPage() {
         socket.off('stroke:create'); 
         socket.off('stroke:delete');
         socket.off('strokes:delete');
+        socket.off('shape:is-locked');
+        socket.off('shape:is-unlocked');
+        socket.off('shape:lock-failed');
+        socket.off('cursor:update');
+        socket.off('cursor:leave');
+        socket.emit("leave-file", fileId);
+        socket.disconnect();
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.fileId, session?.user?.token, dispatch, router]);
 
   // --- Drawing Handlers ---
@@ -219,12 +283,25 @@ export default function CanvasPage() {
     const stage = stageRef.current;
     if (!stage) return;
 
-    const isDrawingTool = ['rectangle', 'circle', 'line', 'arrow', 'pencil', 'star', 'triangle'].includes(selectedTool);
+    // --- FIX 2: UNLOCK WHEN CLICKING OFF A SHAPE ---
     if (e.target === stage) {
+      // Check if we *had* a shape selected
+      if (selectedShapeId) {
+        // We are deselecting, so unlock the shape
+        SingletonSocket.getInstance()?.emit("shape:unlock", {
+          fileId: params.fileId,
+          shapeId: selectedShapeId,
+          userId: session?.user?.id
+        });
+      }
       setSelectedShapeId(null);
     }
+    // --- END FIX 2 ---
 
-    if (!isAllowedToDraw() || (!isDrawingTool && selectedTool !== 'eraser')) return;
+    const isDrawingTool = ['rectangle', 'circle', 'line', 'arrow', 'pencil', 'star', 'triangle', 'text'].includes(selectedTool);
+    
+    // This check is now separate from the one above
+    if (!isAllowedToDraw() || (!isDrawingTool && selectedTool !== 'eraser' && selectedTool !== 'hand')) return;
 
     setIsDrawing(true);
     const pos = getPointerPosition();
@@ -246,19 +323,45 @@ export default function CanvasPage() {
         text: '',
         fontSize: 16,
         fontFamily: 'Arial',
+        fontWeight: 'normal',
+        fontStyle: 'normal',
       };
       setShapesAndRef(prev => [...prev, newShape]);
     }
   };
 
   const handleMouseMove = (e: KonvaEventObject<MouseEvent>) => {
+    // --- FIX 1: CURSOR & HEARTBEAT LOGIC MOVED TO THE TOP ---
+    const pos = getPointerPosition();
+    if (pos && session?.user && SingletonSocket.getInstance()?.connected) {
+      // A. Broadcast our cursor position (Always)
+      SingletonSocket.getInstance()?.emit("cursor:move", {
+        fileId: params.fileId,
+        position: pos,
+        user: {
+          name: session.user.name || 'Anonymous',
+          email: session.user.email || ''
+        }
+      });
+
+      // B. Broadcast lock-refresh "heartbeat" if dragging a locked shape
+      if (isDrawingRef.current && selectedTool === 'hand' && selectedShapeId) {
+        SingletonSocket.getInstance()?.emit("shape:lock-refresh", {
+          fileId: params.fileId,
+          shapeId: selectedShapeId,
+          userId: session?.user?.id
+        });
+      }
+    }
+
+    // --- ORIGINAL DRAWING LOGIC (UNCHANGED) ---
     if (!isDrawingRef.current || !isAllowedToDraw()) return;
     const isDrawingTool = ['rectangle', 'circle', 'line', 'arrow', 'pencil', 'star', 'triangle', 'text'].includes(selectedTool);
     if (!isDrawingTool) {
         return; 
     }
-    const pos = getPointerPosition();
-    if (!pos) return;
+    
+    if (!pos) return; // Already got pos, but double-check
 
     setShapesAndRef(prev => {
       const last = prev[prev.length - 1];
@@ -283,10 +386,22 @@ export default function CanvasPage() {
     if (!isDrawingRef.current) return;
     setIsDrawing(false);
 
+    if (selectedTool === 'hand' && selectedShapeId) {
+      SingletonSocket.getInstance()?.emit("shape:unlock", {
+        fileId: params.fileId,
+        shapeId: selectedShapeId,
+        userId: session?.user?.id
+      });
+      setSelectedShapeId(null); 
+    }
+  
+
     const currentShapes = shapesRef.current;
     if (currentShapes.length === 0) return;
     const lastShape = currentShapes[currentShapes.length - 1];
     if (!lastShape) return;
+
+    
 
     if (selectedTool !== 'eraser') {
       const normalized = normalizeShapeSize(lastShape);
@@ -460,33 +575,85 @@ const handleShapeChange = useCallback((updatedShape: Shape) => {
         style={{ cursor: cursorStyle }}
       >
         <Layer>
-         
 
           {shapes.map((shape) => (
             <ShapeRenderer
               key={shape.id}
               shape={shape}
-              isSelected={shape.id === selectedShapeId && selectedTool === 'hand'}
+              
+              // --- Props for Visuals ---
+              isSelected={shape.id === selectedShapeId}
+              isLocked={!!lockedShapes[shape.id] && lockedShapes[shape.id] !== session?.user?.id}
+              
+              // --- Props for Tools ---
               isDrawing={isDrawing}
               selectedTool={selectedTool}
-              onSelect={(isDblClick = false) => {
+              
+              // --- Prop for Changing the Shape ---
+              onChange={handleShapeChange}
+              
+              // --- FIX 3: SMARTER LOCK REQUESTS ---
+              
+              // 1. onSelectRequest (for locking)
+              onSelectRequest={() => {
+                if (!isAllowedToDraw() || selectedTool !== 'hand' || lockedShapes[shape.id]) {
+                  return; // Not allowed, not hand tool, or already locked by someone
+                }
+
+                // If we're trying to select a *different* shape...
+                if (selectedShapeId && selectedShapeId !== shape.id) {
+                  // ...unlock the OLD one first.
+                  SingletonSocket.getInstance()?.emit("shape:unlock", {
+                    fileId: params.fileId,
+                    shapeId: selectedShapeId,
+                    userId: session?.user?.id
+                  });
+                }
+                
+                // Now, request the lock for the NEW one.
+                SingletonSocket.getInstance()?.emit("shape:lock", {
+                  fileId: params.fileId,
+                  shapeId: shape.id,
+                  userId: session?.user?.id
+                });
+              }}
+              
+              // 2. onDeleteRequest (for erasing)
+              onDeleteRequest={() => {
+                // This function is correct.
                 if (isAllowedToDraw()) {
-                  if (selectedTool === 'eraser' && !isDblClick) {
-                    const newShapes = shapesRef.current.filter(s => s.id !== shape.id);
-                    setShapesAndRef(newShapes);
-                    updateHistory(newShapes);
-                    if (SingletonSocket.getInstance()?.connected) {
-                      SingletonSocket.getInstance()?.emit('stroke:delete', { fileId: params.fileId, role: collaborativeRole, stroke: shape.id });
-                    }
-                  } else {
-                    setSelectedTool('hand');
-                    setSelectedShapeId(shape.id);
+                  const newShapes = shapesRef.current.filter(s => s.id !== shape.id);
+                  setShapesAndRef(newShapes);
+                  updateHistory(newShapes);
+                  if (SingletonSocket.getInstance()?.connected) {
+                    SingletonSocket.getInstance()?.emit('stroke:delete', { fileId: params.fileId, role: collaborativeRole, stroke: shape.id });
                   }
                 }
               }}
-              onChange={handleShapeChange}
             />
           ))}
+
+          {/* Cursors */}
+           {Object.entries(cursors).map(([id, cursor]) => {
+            // defensive checks in case we got a malformed cursor
+            const pos = cursor?.position;
+            const userName = cursor?.user?.name ?? 'Anonymous';
+
+            if (!pos || typeof pos.x !== 'number' || typeof pos.y !== 'number') {
+              // skip rendering invalid cursors (or optionally continue)
+              return null;
+            }
+
+            return (
+              <CursorRenderer
+                key={id}
+                x={pos.x}
+                y={pos.y}
+                name={userName}
+              />
+            );
+          })}
+
         </Layer>
       </Stage>
 
