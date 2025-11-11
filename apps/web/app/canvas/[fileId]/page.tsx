@@ -39,6 +39,8 @@ export default function CanvasPage() {
   const [history, setHistory] = useState<Shape[][]>([]);
   const [historyStep, setHistoryStep] = useState(0);
 
+
+
   const [selectedTool, setSelectedTool] = useState<ShapeType>('hand');
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
   const [strokeColor, setStrokeColor] = useState("#ffffff");
@@ -51,6 +53,7 @@ export default function CanvasPage() {
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
 
   // --- Refs ---
   const isDrawingRef = useRef(isDrawing);
@@ -283,11 +286,8 @@ export default function CanvasPage() {
     const stage = stageRef.current;
     if (!stage) return;
 
-    // --- FIX 2: UNLOCK WHEN CLICKING OFF A SHAPE ---
     if (e.target === stage) {
-      // Check if we *had* a shape selected
       if (selectedShapeId) {
-        // We are deselecting, so unlock the shape
         SingletonSocket.getInstance()?.emit("shape:unlock", {
           fileId: params.fileId,
           shapeId: selectedShapeId,
@@ -296,11 +296,48 @@ export default function CanvasPage() {
       }
       setSelectedShapeId(null);
     }
-    // --- END FIX 2 ---
+
+    if (selectedTool === 'text') {
+      if (editingTextId) {
+        return;
+      }
+      if (!isAllowedToDraw()) return;
+      const pos = getPointerPosition();
+      if (!pos) return;
+      const newShape: Shape = {
+        id: `${session?.user?.id}-${Date.now()}`,
+        type: 'text',
+        x: pos.x,
+        y: pos.y,
+        text: 'Text',
+        color: strokeColor,
+        fontSize: 16,
+        fontFamily: 'Arial',
+        strokeWidth: 0,
+        rotation: 0,
+        width: 60, 
+        height: 20,
+      };
+      
+      const normalized = normalizeShapeSize(newShape);
+      setShapesAndRef(prev => [...prev, normalized]);
+      updateHistory(shapesRef.current);
+      setSelectedShapeId(normalized.id);
+      setEditingTextId(normalized.id);
+      
+      // 4. Broadcast creation
+      if (SingletonSocket.getInstance()?.connected) {
+        SingletonSocket.getInstance()?.emit('stroke:create', { fileId: params.fileId, role: collaborativeRole, stroke: normalized });
+      }
+      setSelectedTool('hand');
+
+      setIsDrawing(false); 
+      return; 
+    }
+
 
     const isDrawingTool = ['rectangle', 'circle', 'line', 'arrow', 'pencil', 'star', 'triangle', 'text'].includes(selectedTool);
-    
-    // This check is now separate from the one above
+
     if (!isAllowedToDraw() || (!isDrawingTool && selectedTool !== 'eraser' && selectedTool !== 'hand')) return;
 
     setIsDrawing(true);
@@ -592,7 +629,27 @@ const handleShapeChange = useCallback((updatedShape: Shape) => {
               // --- Prop for Changing the Shape ---
               onChange={handleShapeChange}
               
-              // --- FIX 3: SMARTER LOCK REQUESTS ---
+              isEditing={shape.id === editingTextId}
+              onEditEnd={() => {
+                setEditingTextId(null);
+                // Also unlock shape when done editing
+                if (shape.id) {
+                  SingletonSocket.getInstance()?.emit("shape:unlock", {
+                    fileId: params.fileId,
+                    shapeId: shape.id,
+                    userId: session?.user?.id
+                  });
+                }
+              }}
+              onEditStart={() => {
+                SingletonSocket.getInstance()?.emit("shape:lock", {
+                  fileId: params.fileId,
+                  shapeId: shape.id,
+                  userId: session?.user?.id
+                });
+                setEditingTextId(shape.id);
+                setSelectedShapeId(shape.id);
+              }}
               
               // 1. onSelectRequest (for locking)
               onSelectRequest={() => {
@@ -622,6 +679,9 @@ const handleShapeChange = useCallback((updatedShape: Shape) => {
               onDeleteRequest={() => {
                 // This function is correct.
                 if (isAllowedToDraw()) {
+                  if (shape.id === editingTextId) {
+                    setEditingTextId(null);
+                  }
                   const newShapes = shapesRef.current.filter(s => s.id !== shape.id);
                   setShapesAndRef(newShapes);
                   updateHistory(newShapes);
