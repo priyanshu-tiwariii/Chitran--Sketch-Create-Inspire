@@ -2,8 +2,52 @@ import { prisma } from "../db/index";
 import asyncHandler from "../helpers/asyncHandler";
 import apiError from "../helpers/apiError";
 import apiResponse from "../helpers/apiResponse";
-import { schemas } from "@repo/common/schemas";         
-import type { Shape } from "@repo/common/types";    
+import { schemas } from "@repo/common/schemas";
+import { z } from "zod";
+
+type StrokeInput = z.infer<typeof schemas.StrokeSchema>;
+
+const DeltaSchema = z.object({
+  actions: z.object({
+    created: schemas.StrokeSchema.array().default([]),
+    updated: schemas.StrokeSchema.array().default([]),
+    deleted: z.string().array().default([]),
+  }),
+});
+
+const mapShapeToCreateData = (shape: StrokeInput, fileId: string) => ({
+  ...(shape.id ? { id: shape.id } : {}),
+  fileId,
+  type: shape.type,
+  x: shape.x ?? 0,
+  y: shape.y ?? 0,
+  width: shape.width ?? 0,
+  height: shape.height ?? 0,
+  color: shape.color ?? "#000000",
+  points: shape.points ?? [],
+  rotation: shape.rotation ?? 0,
+  strokeWidth: shape.strokeWidth ?? 1,
+  radius: shape.radius ?? 0,
+  text: shape.text ?? "",
+  fontSize: shape.fontSize ?? 16,
+  fontFamily: shape.fontFamily ?? "Arial",
+});
+
+const mapShapeToUpdateData = (shape: StrokeInput) => ({
+  type: shape.type,
+  x: shape.x ?? 0,
+  y: shape.y ?? 0,
+  width: shape.width ?? 0,
+  height: shape.height ?? 0,
+  color: shape.color ?? "#000000",
+  points: shape.points ?? [],
+  rotation: shape.rotation ?? 0,
+  strokeWidth: shape.strokeWidth ?? 1,
+  radius: shape.radius ?? 0,
+  text: shape.text ?? "",
+  fontSize: shape.fontSize ?? 16,
+  fontFamily: shape.fontFamily ?? "Arial",
+});
 
 export const getStroke = asyncHandler(async (req: any, res: any) => {
   try {
@@ -82,83 +126,74 @@ export const getStroke = asyncHandler(async (req: any, res: any) => {
   }
 });
 
-// --- SAVE/SYNC FUNCTION ---
+// --- SAVE/SYNC FUNCTION (delta-based) ---
 export const syncStrokes = asyncHandler(async (req: any, res: any) => {
   try {
-    console.log("Syncing strokes...");
     const fileId = req.params.fileId;
-    const { shapes } = req.body;
+
     const isFileExist = await prisma.createdFile.findUnique({
       where: { id: fileId },
     });
-    console.log("File existence check:", isFileExist);
+
     if (!isFileExist) {
       throw new apiError(404, "File not found");
     }
-    const user = req.user;
-    const userId = user.id;
+
+    const userId = req.user.id;
 
     const isUserAllowed = await prisma.collaborator.findFirst({
-      where: { userId: userId, fileId: fileId },
+      where: { userId, fileId },
     });
 
     if (isUserAllowed?.role !== "ADMIN" && isUserAllowed?.role !== "EDITOR") {
       throw new apiError(403, "You are not allowed to make changes");
     }
+
     if (isFileExist.collabMode === false && isFileExist.createdByUserId !== userId) {
       throw new apiError(403, "You are not allowed to make changes in this file");
     }
 
-    const parsedShapes = schemas.StrokeSchema.array().safeParse(shapes);
-    if (!parsedShapes.success) {
-      throw new apiError(400, "Invalid shape data", parsedShapes.error.errors);
+    const parsedBody = DeltaSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      throw new apiError(400, "Invalid delta payload", parsedBody.error.errors);
     }
 
-    console.log("Parsed shapes:", parsedShapes.data.length);
-    console.log("Parsed shapes data:", parsedShapes.data);
-    const validatedShapes = parsedShapes.data as Shape[];
-
-    console.log("Validated shapes:", validatedShapes.length);
-    const strokesToCreate = validatedShapes.map((shape) => ({
-      id: shape.id,
-      fileId: fileId,
-      type: shape.type,
-      x: shape.x,
-      y: shape.y,
-      width: shape.width,
-      height: shape.height,
-      color: shape.color,
-      points: shape.points ?? [],
-      rotation: shape.rotation,
-      strokeWidth: shape.strokeWidth,
-      radius: shape.radius,
-      text: shape.text,
-      fontSize: shape.fontSize,
-      fontFamily: shape.fontFamily,
-    }));
+    const { actions } = parsedBody.data;
 
     await prisma.$transaction(async (tx) => {
-      await tx.stroke.deleteMany({
-        where: { fileId: fileId },
-      });
+      // 1. Process deletions
+      if (actions.deleted.length > 0) {
+        await tx.stroke.deleteMany({
+          where: { id: { in: actions.deleted }, fileId },
+        });
+      }
 
-      if (strokesToCreate.length > 0) {
+      // 2. Process creations
+      if (actions.created.length > 0) {
         await tx.stroke.createMany({
-          data: strokesToCreate,
+          data: actions.created.map((shape) => mapShapeToCreateData(shape, fileId)),
+          skipDuplicates: true,
+        });
+      }
+
+      // 3. Process updates (individual to support partial field changes)
+      for (const shape of actions.updated) {
+        if (!shape.id) continue;
+        await tx.stroke.update({
+          where: { id: shape.id },
+          data: mapShapeToUpdateData(shape),
         });
       }
     });
 
-    console.log("Canvas saved successfully");
-    return res.status(200).json(new apiResponse(null, 200, "Canvas saved successfully", true));
+    return res.status(200).json(new apiResponse(null, 200, "Canvas synced successfully", true));
   } catch (error) {
-    console.error("Error saving canvas:", error);
     if (error instanceof apiError) {
       throw new apiError(error.status, error.message);
     } else if (error instanceof Error) {
-      throw new apiError(500, error.message || "Database error while saving canvas");
+      throw new apiError(500, error.message || "Database error while syncing canvas");
     } else {
-      throw new apiError(500, "Unknown error occurred while saving canvas");
+      throw new apiError(500, "Unknown error occurred while syncing canvas");
     }
   }
 });

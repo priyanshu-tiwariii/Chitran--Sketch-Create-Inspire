@@ -1,36 +1,51 @@
 import jwt from "jsonwebtoken";
+import { Request, Response, NextFunction } from "express";
 import apiError from "../helpers/apiError";
-import { env } from "@repo/backend-common/config"
-import { prisma } from "../db/index";
+import { env } from "@repo/backend-common/config";
 
+interface JwtUserPayload {
+  id: string;
+  email: string;
+  name: string;
+}
 
-export const verifyToken = async (req: any, res: any, next: any) => {
+declare module "express" {
+  interface Request {
+    user?: JwtUserPayload;
+  }
+}
 
-    const token = req.headers.authorization.split(" ")[1];
-    console.log("Token", token);
-    if(!token){
-        throw new apiError(401, "Access Denied");
+export const verifyToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader?.startsWith("Bearer ")) {
+      return next(new apiError(401, "Access Denied: No token provided"));
     }
 
-    try {
-        const verified = jwt.verify(token, env.JWT_SECRET!)as { email: string };
-       
-        if(verified){
-            const user = await prisma.user.findUnique({where:{email : verified.email}});
-            req.user = user;
-            console.log("User", req.user);
-            next();
-        }     
-    } catch (error) {
-        console.log("Error", error);
-        if(error instanceof jwt.JsonWebTokenError){
-            throw new apiError(401, "Invalid Token");
-        }
-        else if(error instanceof jwt.TokenExpiredError){
-            throw new apiError(401, "Token Expired");
-        }
-        else{
-            throw new apiError(401, "Invalid Token");
-        }
+    const token = authHeader.split(" ")[1]!;
+    // jwt.verify with just two args returns string | JwtPayload.
+    // We cast through unknown to our known payload shape after verifying presence.
+    const raw = jwt.verify(token, env.JWT_SECRET!) as unknown as JwtUserPayload;
+
+    req.user = {
+      id: raw.id,
+      email: raw.email,
+      name: raw.name,
+    };
+
+    next();
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      return next(new apiError(401, "Token Expired"));
     }
+    if (error instanceof jwt.JsonWebTokenError) {
+      return next(new apiError(401, "Invalid Token"));
+    }
+    next(new apiError(401, "Authentication failed"));
+  }
 };

@@ -218,20 +218,42 @@ export default function Dashboard() {
         
         
         <div className="max-w-6xl mx-auto w-full pt-10 lg:pt-0">
+          {/* Section header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-[#2d2d2d]">Your Canvases</h1>
+              <p className="text-sm text-gray-500 mt-0.5">Create, open, and manage your drawings</p>
+            </div>
+            <button
+              onClick={() => setShowModal(true)}
+              className="hidden sm:flex items-center gap-2 px-4 py-2 bg-[#ff7753] text-white rounded-lg hover:bg-[#e95e3f] transition text-sm font-medium shadow-sm"
+            >
+              <FilePlus size={16} />
+              New Canvas
+            </button>
+          </div>
+
           <section>
             {query.isLoading ? (
               <LoadingSkeleton />
             ) : query.data?.data.length === 0 ? (
 
               // Display No File Message When there is no file ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                <div className="text-center mt-24 sm:mt-32">
-                  <div className="inline-block bg-[#ffe4dc] p-4 sm:p-5 rounded-full mb-6">
-                    <FilePlus size={32} className="text-[#ff7753]" />
+                <div className="text-center mt-16 sm:mt-24">
+                  <div className="inline-flex items-center justify-center bg-[#ffe4dc] p-5 sm:p-6 rounded-full mb-6">
+                    <FilePlus size={36} className="text-[#ff7753]" />
                   </div>
-                  <h2 className="text-lg sm:text-xl font-semibold">No files yet</h2>
-                  <p className="text-[#777] mt-1 text-sm sm:text-base">
-                    Start by creating your first canvas.
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-800">No canvases yet</h2>
+                  <p className="text-gray-500 mt-2 text-sm sm:text-base max-w-xs mx-auto">
+                    Create your first canvas and start drawing with your team.
                   </p>
+                  <button
+                    onClick={() => setShowModal(true)}
+                    className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 bg-[#ff7753] text-white rounded-lg hover:bg-[#e95e3f] transition text-sm font-medium shadow-sm"
+                  >
+                    <FilePlus size={16} />
+                    Create Canvas
+                  </button>
                 </div>
               // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             ) : (
@@ -258,19 +280,19 @@ export default function Dashboard() {
                 </div>
               {/* ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------  */}
               
-              {/* Pagination Controls---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
-                <div className="mt-6 flex justify-between items-center">
+              {/* Pagination Controls */}
+                <div className="mt-8 flex justify-center items-center gap-3">
                   <button
                     onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                     disabled={page === 1}
-                    className="px-4 py-2 bg-[#ff7753] text-white rounded disabled:opacity-50"
+                    className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
                   >
                     Previous
                   </button>
-                  <span className="text-sm text-gray-600">Page {page}</span>
+                  <span className="text-sm text-gray-500 font-medium px-3">Page {page}</span>
                   <button
                     onClick={() => setPage((prev) => prev + 1)}
-                    className="px-4 py-2 bg-[#ff7753] text-white rounded"
+                    className="px-4 py-2 text-sm font-medium rounded-lg bg-[#ff7753] text-white hover:bg-[#e95e3f] transition"
                   >
                     Next
                   </button>

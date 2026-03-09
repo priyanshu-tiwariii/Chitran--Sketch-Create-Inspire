@@ -24,7 +24,10 @@ const Navbar = () => {
 
           <div className="flex items-center space-x-4">
            
-           <LoginButton name="Start Drawing"/>
+           <LoginButton
+             name="Start Drawing"
+             className="text-white text-sm px-5 py-2 rounded-full font-medium hover:opacity-90 transition shadow-md"
+           />
             
             {/* Mobile Menu Button */}
             <button 

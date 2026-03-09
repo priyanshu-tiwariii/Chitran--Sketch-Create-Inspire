@@ -38,12 +38,12 @@ export const ShapeRenderer = memo(({
 
     const stage = textNode.getStage();
     const container = stage.container();
-    const layer = textNode.getLayer();
 
-    // 1. Hide the Konva node
-    textNode.hide();
+    // 1. Hide the Konva text node declaratively via the `visible` prop on <Text>
+    //    NOT imperatively here. Calling textNode.hide() is overridden by the next
+    //    React reconciliation (e.g., a cursor update re-render), which restores
+    //    visibility to true and causes the <Text> and <textarea> to overlap.
     transformerRef.current?.hide();
-    layer.batchDraw();
 
     // 2. Create <textarea>
     const textarea = document.createElement('textarea');
@@ -92,14 +92,19 @@ export const ShapeRenderer = memo(({
     };
 
     // 4. Calculate position
+    // absolutePosition() already returns coordinates in screen-space (it
+    // accounts for the stage's own scale + pan), so we must NOT multiply
+    // by scale again for top/left — that would double-apply the transform
+    // and send the textarea off-screen when zoomed or panned.
+    // The font size IS in logical units so it still needs the scale factor.
     const positionTextarea = () => {
       const textPosition = textNode.absolutePosition();
       const scale = stage.scaleX();
-      
-      textarea.style.top = `${textPosition.y * scale}px`;
-      textarea.style.left = `${textPosition.x * scale}px`;
+
+      textarea.style.top = `${textPosition.y}px`;
+      textarea.style.left = `${textPosition.x}px`;
       textarea.style.fontSize = `${(shape.fontSize || 16) * scale}px`;
-      
+
       resizeTextarea();
     };
 
@@ -120,9 +125,7 @@ export const ShapeRenderer = memo(({
       // Clean up
       try { container.removeChild(textarea); } catch (e) {}
       window.removeEventListener('click', handleOutsideClick);
-      
-      textNode.show();
-      layer.batchDraw();
+
       onEditEnd();
 
       // Final update
@@ -166,8 +169,6 @@ export const ShapeRenderer = memo(({
     return () => {
       try { container.removeChild(textarea); } catch (e) {}
       window.removeEventListener('click', handleOutsideClick);
-      textNode.show();
-      layer.batchDraw();
     };
 
   }, [isEditing]);
@@ -346,8 +347,9 @@ export const ShapeRenderer = memo(({
           strokeWidth={0}
           width={width || undefined}
           height={height || undefined}
-          verticalAlign="top" // Important for layout
-          wrap="word" // Allows wrapping
+          verticalAlign="top"
+          wrap="word"
+          visible={!isEditing}
         />;
       
       case 'line':

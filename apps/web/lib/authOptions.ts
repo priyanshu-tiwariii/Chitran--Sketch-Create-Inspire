@@ -85,8 +85,13 @@ export const authOptions: NextAuthOptions = {
     },
 
     async jwt({ token, user }) {
+      // `user` is only present on the very first sign-in call.
+      // We store the full enriched user object AND the backend JWT separately
+      // so the session callback can read from reliable, stable keys.
       if (user) {
         token.user = user;
+        token.backendToken = (user as customUser).token ?? null;
+        token.backendId = (user as customUser).id ?? null;
       }
       return token;
     },
@@ -95,7 +100,10 @@ export const authOptions: NextAuthOptions = {
       if (token.user) {
         session.user = token.user as customUser;
       }
-      console.log("Session", session);
+      // Reliably populate token and id from the dedicated JWT keys,
+      // regardless of how the session.user object was initialised.
+      session.user.token = (token.backendToken as string | null | undefined) ?? null;
+      session.user.id = (token.backendId as string | null | undefined) ?? null;
       return session;
     },
   },

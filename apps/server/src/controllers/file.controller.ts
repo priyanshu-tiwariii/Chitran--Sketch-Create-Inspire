@@ -6,19 +6,7 @@ import { Request, Response } from "express";
 import { schemas } from "@repo/common/schemas";
 
 import {redis} from "../db/index";
-interface User {
-    id: string;
-    email: string;
-    name: string;
-    profilePhoto: string;
-    provider: string;
-    userName: string;
-    bio: string;
-    createdAt: Date;
-  }
-
-  
-  const invalidateUserFileCache = async (userId: string) => {
+const invalidateUserFileCache = async (userId: string) => {
     const keys = await redis.smembers(`user:${userId}:files:keys`);
     if (keys.length > 0) {
       await redis.del(...keys); 
@@ -27,12 +15,6 @@ interface User {
   };
 
   
-  declare module "express" {
-    interface Request {
-      user?: User;
-    }
-  }
-
 // Create file -----------------------------------------------------------------------------------------------------------------------------------------------------
   export const createFile = asyncHandler(async (req: Request, res: Response) => {
     try {
@@ -87,29 +69,24 @@ interface User {
 
 // Get file -----------------------------------------------------------------------------------------------------------------------------------------------------
   export const getFile = asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const fileId = req.params.fileId;
-      const file = await prisma.createdFile.findUnique({
-        where: { id: fileId },
-        include: { collaborators: true },
+    const fileId = req.params.fileId;
+    const userId = req.user!.id;
+
+    const file = await prisma.createdFile.findUnique({
+      where: { id: fileId },
+    });
+
+    if (!file) throw new apiError(404, "File not found");
+
+    const isOwner = file.createdByUserId === userId;
+    if (!isOwner) {
+      const isCollaborator = await prisma.collaborator.findFirst({
+        where: { fileId, userId },
       });
-
-      if (!file) throw new apiError(404, "File not found");
-
-      const isCollaborator = file.collaborators.some((c: { userId: string | undefined; }) => c.userId === req.user?.id);
       if (!isCollaborator) throw new apiError(403, "User not authorized to access this file");
-
-      return res.status(200).json(new apiResponse(file, 200, "File fetched successfully", true));
-    } catch (error) {
-      console.error("Error fetching file:", error);
-      if (error instanceof apiError) {
-        throw new apiError(error.status, error.message);
-      } else if (error instanceof Error) {
-        throw new apiError(500, error.message || "Database error while fetching file");
-      } else {
-        throw new apiError(500, "Unknown error occurred while fetching file");
-      }
     }
+
+    return res.status(200).json(new apiResponse(file, 200, "File fetched successfully", true));
   });
 // --------------------------------------------------------------------------------------------------------------------------------------------------
 

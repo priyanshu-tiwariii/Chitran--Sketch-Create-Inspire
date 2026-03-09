@@ -1,4 +1,4 @@
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import {
   Dialog,
   DialogTrigger,
@@ -7,13 +7,12 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@repo/ui/components/ui/dialog";
-import { Button } from "./Button";
 import { FcGoogle } from "react-icons/fc"; 
 import { FaGithub } from "react-icons/fa"; 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 
-const LoginButton = ({ className, name, ...props }: { className?: string; name: any } & React.ComponentPropsWithoutRef<'button'>) => {
+const LoginButton = ({ className, name, ...props }: { className?: string; name: ReactNode } & React.ComponentPropsWithoutRef<'button'>) => {
   const { data: session } = useSession();
   const router = useRouter();
   useEffect(() => {
@@ -27,36 +26,40 @@ const LoginButton = ({ className, name, ...props }: { className?: string; name: 
   return(
     <Dialog>
       <DialogTrigger asChild>
-        <Button className={className} {...props}>{name}</Button>
+        <button
+          className={`bg-gradient-to-r from-[#ff9966] to-[#ff5e62] cursor-pointer ${className ?? ""}`}
+          {...props}
+        >
+          {name}
+        </button>
       </DialogTrigger>
       <DialogContent
-        className="bg-gray-100 backdrop-blur-md border border-gray-700 shadow-lg 
-      rounded-lg p-6 text-black max-w-sm mx-auto"
+        className="bg-white border border-gray-200 shadow-xl rounded-2xl p-8 text-gray-900 max-w-sm mx-auto"
       >
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold">Sign In Required</DialogTitle>
-          <DialogDescription className="text-sm text-black/60">
-            Choose a sign-in method to continue using our chat app.
+          <DialogTitle className="text-xl font-bold text-center">Welcome to Chitran</DialogTitle>
+          <DialogDescription className="text-sm text-gray-500 text-center mt-1">
+            Sign in to start collaborating on your canvas
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col space-y-4 mt-4">
+        <div className="flex flex-col space-y-3 mt-6">
           {/* Google Sign-in Button */}
-          <Button
+          <button
             onClick={() => signIn("google")}
-            className="w-full flex items-center justify-center space-x-2"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700 shadow-sm cursor-pointer"
           >
-            <FcGoogle className="text-xl" />
-            <span className="text-black">Sign in with Google</span>
-          </Button>
+            <FcGoogle className="text-xl flex-shrink-0" />
+            <span>Continue with Google</span>
+          </button>
 
           {/* GitHub Sign-in Button */}
-          <Button
+          <button
             onClick={() => signIn("github")}
-            className="w-full flex items-center justify-center space-x-2 bg-gray-800 hover:bg-gray-700"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-gray-900 hover:bg-gray-800 transition-colors text-sm font-medium text-white shadow-sm cursor-pointer"
           >
-            <FaGithub className="text-xl" />
-            <span className="text-white">Sign in with GitHub</span>
-          </Button>
+            <FaGithub className="text-xl flex-shrink-0" />
+            <span>Continue with GitHub</span>
+          </button>
         </div>
       </DialogContent>
     </Dialog>
